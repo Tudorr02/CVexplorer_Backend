@@ -1,0 +1,6 @@
+@CVexplorer_HostAddress = http://localhost:5096
+
+GET {{CVexplorer_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
