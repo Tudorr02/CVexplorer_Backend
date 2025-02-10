@@ -8,7 +8,7 @@ namespace ProjectName.Data.Seeders
     {
         public static async Task SeedRoles(RoleManager<Role> roleManager)
         {
-            var roles = new[] { "Admin", "Moderator", "User" };
+            var roles = new[] { "Admin", "Moderator","HRLeader" ,"HRUser" };
 
             foreach (var role in roles)
             {

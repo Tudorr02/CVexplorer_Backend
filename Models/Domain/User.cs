@@ -8,6 +8,11 @@ namespace CVexplorer.Models.Domain
         public string? LastName { get; set; }
         public string? CompanyName { get; set; }
 
+        public int? CompanyId { get; set; }
+        public Company? Company { get; set; }
         public ICollection<UserRole> UserRoles { get; set; } = [];
+
+        public ICollection<UserDepartmentAccess> UserDepartmentAccesses { get; set; } = [];
+
     }
 }

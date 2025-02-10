@@ -50,7 +50,10 @@ namespace CVexplorer.Extensions
             services.AddAuthorizationBuilder()
                 .AddPolicy("RequireAdminRole", policy => policy.RequireRole("Admin"))
                 .AddPolicy("RequireModeratorRole", policy => policy.RequireRole("Admin", "Moderator"))
-                .AddPolicy("RequireUserRole", policy => policy.RequireRole("Admin", "Moderator", "User"));
+                .AddPolicy("RequireHRLeaderRole", policy => policy.RequireRole("HRLeader"))
+                .AddPolicy("RequireHRUserRole", policy => policy.RequireRole("HRLeader", "HRUser"))
+                .AddPolicy("RequireAllRoles", policy => policy.RequireRole("Admin", "Moderator","HRLeader", "HRUser"));
+
 
             return services;
         }
