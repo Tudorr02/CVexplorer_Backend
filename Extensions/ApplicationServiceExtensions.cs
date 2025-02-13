@@ -17,6 +17,7 @@ namespace CVexplorer.Extensions
             services.AddCors();
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
             services.AddScoped<ITokenService, TokenService>();
+            services.AddScoped<IUserDetailsRepository, UserDetailsRepository>();
 
             return services;
         }

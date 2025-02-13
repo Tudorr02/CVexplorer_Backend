@@ -8,6 +8,7 @@ namespace CVexplorer.Data
     public class DataContext(DbContextOptions options) : IdentityDbContext<User,Role,int,IdentityUserClaim<int>, 
         UserRole,IdentityUserLogin<int>, IdentityRoleClaim<int>, IdentityUserToken<int>>(options)
     {
+
         /// Users DbSet already exists in IdentityDbContext
         /// Roles DbSet already exists in IdentityDbContext
 
