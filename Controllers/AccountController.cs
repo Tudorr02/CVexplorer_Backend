@@ -17,6 +17,7 @@ namespace CVexplorer.Controllers
     [Route("api/[controller]")]
     public class AccountController(UserManager<User> userManager, ITokenService tokenService , IMapper mapper, IUserDetailsRepository _userDetails) : Controller
     {
+        [Authorize(Policy = "RequireModeratorRole")]
         [HttpPost("Register")]
         public async Task<ActionResult<UserDTO>> Register(RegisterDTO registerDto)
         {
