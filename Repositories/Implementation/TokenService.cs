@@ -32,7 +32,7 @@ namespace CVexplorer.Repositories.Implementation
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.Now.AddDays(30),
+                Expires = DateTime.Now.AddDays(5),
                 SigningCredentials = credentials
             };
 

@@ -35,7 +35,29 @@ namespace CVexplorer.Extensions
                      ValidateIssuerSigningKey = true,
                      IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(tokenKey)),
                      ValidateIssuer = false,
-                     ValidateAudience = false
+                     ValidateAudience = false,
+                     ValidateLifetime = true,
+                     RequireExpirationTime = true,
+  
+                     //ValidIssuer = configuration["Jwt:Issuer"],
+                     //ValidAudience = configuration["Jwt:Audience"],
+                     ClockSkew = TimeSpan.Zero 
+
+                 };
+
+                 options.Events = new JwtBearerEvents
+                 {
+                     OnAuthenticationFailed = context =>
+                     {
+                         if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
+                         {
+                             context.Response.Headers.Add("Token-Expired", "true"); 
+                             context.Response.StatusCode = 401; 
+                             context.Response.ContentType = "application/json";
+                             return context.Response.WriteAsync("{\"error\": \"Token expired. Please log in again.\"}");
+                         }
+                         return Task.CompletedTask;
+                     }
                  };
              });
 
