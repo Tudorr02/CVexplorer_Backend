@@ -16,14 +16,16 @@ namespace CVexplorer.Extensions
             services.AddIdentityCore<User>(opt =>
             {
                 opt.Password.RequireNonAlphanumeric = false;
-                //opt.Password.RequiredLength = 3;             // Set the minimum password length
+                opt.Password.RequiredLength = 5;             // Set the minimum password length
                 opt.Password.RequireUppercase = false;       // Optional: Disable uppercase requirement
                 opt.Password.RequireDigit = false;
 
             })
                 .AddRoles<Role>()
-                .AddRoleManager<RoleManager<Role>>() 
+                .AddRoleManager<RoleManager<Role>>()
                 .AddEntityFrameworkStores<DataContext>();
+
+            
 
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

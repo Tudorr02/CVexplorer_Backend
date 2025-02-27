@@ -3,6 +3,7 @@ using CVexplorer.Data;
 using CVexplorer.Exceptions;
 using CVexplorer.Models.Domain;
 using CVexplorer.Models.DTO;
+using CVexplorer.Models.DTO.Admin;
 using CVexplorer.Repositories.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -17,29 +18,29 @@ namespace CVexplorer.Controllers
     [Route("api/[controller]")]
     public class AccountController(UserManager<User> userManager, ITokenService tokenService , IMapper mapper, IUserDetailsRepository _userDetails) : Controller
     {
-        [Authorize(Policy = "RequireModeratorRole")]
-        [HttpPost("Register")]
-        public async Task<ActionResult<UserDTO>> Register(RegisterDTO registerDto)
-        {
+        //[Authorize(Policy = "RequireModeratorRole")]
+        //[HttpPost("Register")]
+        //public async Task<ActionResult<UserDTO>> Register(UserEnrollmentDTO registerDto)
+        //{
             
-            if(await UserExists(registerDto.Username)) return BadRequest("Username is taken");
+        //    if(await UserExists(registerDto.Username)) return BadRequest("Username is taken");
 
-            var user = mapper.Map<User>(registerDto);
+        //    var user = mapper.Map<User>(registerDto);
 
-            user.UserName = registerDto.Username.ToLower();
+        //    user.UserName = registerDto.Username.ToLower();
 
-            var result = await userManager.CreateAsync(user, registerDto.Password);
+        //    var result = await userManager.CreateAsync(user, registerDto.Password);
             
-            if (!result.Succeeded) return BadRequest("Failed to register");
+        //    if (!result.Succeeded) return BadRequest("Failed to register");
 
-            await userManager.AddToRoleAsync(user, "HRUser");
+        //    await userManager.AddToRoleAsync(user, "HRUser");
 
-            return new UserDTO
-            {
-                Username = user.UserName,
-                Token = await tokenService.CreateToken(user),
-            };
-        }
+        //    return new UserDTO
+        //    {
+        //        Username = user.UserName,
+        //        Token = await tokenService.CreateToken(user),
+        //    };
+        //}
 
         [HttpPost("Login")]
         public async Task<ActionResult<UserDTO>> Login(LoginDTO loginDto)

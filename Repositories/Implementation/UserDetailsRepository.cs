@@ -23,7 +23,7 @@ namespace CVexplorer.Repositories.Implementation
                 {
                     FirstName = u.FirstName,
                     LastName = u.LastName,
-                    CompanyName = u.CompanyName,
+                    CompanyName = u.Company.Name,
                     Email = u.Email
                 })
                 .FirstOrDefaultAsync();

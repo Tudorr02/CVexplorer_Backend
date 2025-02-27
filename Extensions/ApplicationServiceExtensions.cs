@@ -1,6 +1,11 @@
 ﻿using CVexplorer.Data;
+using CVexplorer.Models.Domain;
 using CVexplorer.Repositories.Implementation;
+using CVexplorer.Repositories.Implementation.Admin;
 using CVexplorer.Repositories.Interface;
+using CVexplorer.Repositories.Interface.Admin;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace CVexplorer.Extensions
@@ -18,6 +23,9 @@ namespace CVexplorer.Extensions
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
             services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IUserDetailsRepository, UserDetailsRepository>();
+            services.AddScoped<IUserManagement, UserManagementRepository>();
+        
+            
 
             return services;
         }
