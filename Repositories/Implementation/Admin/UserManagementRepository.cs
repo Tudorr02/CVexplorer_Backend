@@ -148,7 +148,7 @@ namespace CVexplorer.Repositories.Implementation.Admin
 
             if (user == null)
             {
-                throw new NotFoundException("User not found");
+                throw new NotFoundException("User not found !");
             }
 
             return new UserManagementDTO

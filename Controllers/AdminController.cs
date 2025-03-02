@@ -18,7 +18,7 @@ namespace CVexplorer.Controllers
     [Authorize(Policy = "RequireModeratorRole")] // ✅ Restrict access to Admins only
     [ApiController]
     [Route("api/[controller]")]
-    public class AdminController(DataContext _context,UserManager<User> _userManager, IUserManagement _userManagement , IMapper _mapper , ITokenService _tokenService) : Controller
+    public class AdminController(DataContext _context,UserManager<User> _userManager, IDepartmentManagement _departmentManagement ,ICompanyManagement _companyManagement ,IUserManagement _userManagement , IMapper _mapper , ITokenService _tokenService) : Controller
     {
         [HttpGet("Users")]
         public async Task<ActionResult<List<UserManagementDTO>>> GetUsers()
@@ -83,7 +83,7 @@ namespace CVexplorer.Controllers
             }
         }
 
-        [HttpPost("EnrollUser")]
+        [HttpPost("Users")]
         public async Task<ActionResult<UserDTO>> EnrollUser(UserEnrollmentDTO dto)
         {
             if (await UserExists(dto.Username))
@@ -133,6 +133,80 @@ namespace CVexplorer.Controllers
             return await _userManager.Users.AnyAsync(x => x.NormalizedUserName.ToLower() == username.ToLower());
         }
 
+        [HttpGet("Companies")]
+        public async Task<ActionResult<List<CompanyManagementDTO>>> GetCompanies()
+        {
+            var companies = await _companyManagement.GetCompaniesAsync();
+            return Ok(companies);
+        }
+
+        [HttpGet("Companies/{companyName}")]
+        public async Task<ActionResult<CompanyManagementDTO>> GetCompany(string companyName)
+        {
+            try
+            {
+                var company = await _companyManagement.GetCompanyAsync(companyName);
+                return Ok(company);
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message }); // 404 if company not found
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message }); //  400 for other failures
+            }
+        }
+
+        [HttpPut("Companies/{companyName}")]
+        public async Task<IActionResult> UpdateCompany(string companyName, [FromBody] CompanyManagementDTO dto)
+        {
+            try
+            {
+                var updatedCompany = await _companyManagement.UpdateCompanyAsync(companyName, dto);
+                return Ok(updatedCompany); // Returns updated company details
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message }); // 404 if company not found
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message }); //  400 for other failures
+            }
+        }
+
+        [HttpDelete("Companies/{companyName}")]
+        public async Task<IActionResult> DeleteCompany(string companyName)
+        {
+            try
+            {
+                var isDeleted = await _companyManagement.DeleteCompanyAsync(companyName);
+                return Ok(isDeleted); // Returns true if company is deleted
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message }); // 404 if company not found
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message }); //  400 for other failures
+            }
+        }
+
+        [HttpPost("Companies")]
+        public async Task<ActionResult<CompanyManagementDTO>> CreateCompany(CompanyManagementDTO dto)
+        {
+            try
+            {
+                var company = await _companyManagement.CreateCompanyAsync(dto);
+                return Ok(company); // Returns created company details
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message }); //  400 for other failures
+            }
+        }
 
     }
 }
