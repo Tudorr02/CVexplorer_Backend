@@ -208,5 +208,19 @@ namespace CVexplorer.Controllers
             }
         }
 
+        [HttpGet("Roles")]
+        public async Task<ActionResult<List<string>>> GetRoles()
+        {
+            try
+            {
+                var roles = await _context.Roles.Select(r => r.Name).ToListAsync();
+                return Ok(roles);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "An error occurred while fetching roles.", details = ex.Message });
+            }
+        }
+
     }
 }

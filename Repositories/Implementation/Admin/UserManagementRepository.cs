@@ -31,7 +31,10 @@ namespace CVexplorer.Repositories.Implementation.Admin
 
         public async Task<UserManagementDTO> UpdateUserAsync (string username,UserManagementDTO dto)
         {
-            var user = await _userManager.FindByNameAsync(username);
+            var user = await _userManager.Users
+                            .Include(u => u.UserRoles)
+                            .FirstOrDefaultAsync(u => u.UserName == username);
+
 
             if (user == null)
             {
@@ -77,7 +80,7 @@ namespace CVexplorer.Repositories.Implementation.Admin
             }
 
             // ✅ Update User Roles (if provided)
-            if (dto.UserRoles != null && dto.UserRoles.Any())
+            if (dto.UserRoles.Count != user.UserRoles.Count)
             {
                 var currentRoles = await _userManager.GetRolesAsync(user);
                 var rolesToRemove = currentRoles.Except(dto.UserRoles).ToList();
