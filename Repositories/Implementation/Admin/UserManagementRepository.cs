@@ -16,14 +16,20 @@ namespace CVexplorer.Repositories.Implementation.Admin
     {
         public async Task<List<UserManagementDTO>> GetUsersAsync()
         {
-            var users = await _userManager.Users.ToListAsync();
+            //var user = await _userManager.Users
+            //    .Include(u => u.Company) // ✅ Ensure the company is loaded
+            //    .FirstOrDefaultAsync(u => u.UserName == username);
+
+            var users = await _userManager.Users
+                                        .Include(u => u.Company)
+                                        .ToListAsync();
 
             return users.Select(u => new UserManagementDTO
             {
                 Username = u.UserName,
                 FirstName = u.FirstName,
                 LastName = u.LastName,
-                CompanyName = u.Company?.Name,
+                CompanyName = _context.Companies.Where(c=> c.Id == u.CompanyId).Select(c=> c.Name)?.FirstOrDefault(),
                 Email = u.Email,
                 UserRoles = _userManager.GetRolesAsync(u).Result.ToList()
             }).ToList();

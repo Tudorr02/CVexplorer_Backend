@@ -134,14 +134,14 @@ namespace CVexplorer.Controllers
         }
 
         [HttpGet("Companies")]
-        public async Task<ActionResult<List<CompanyManagementDTO>>> GetCompanies()
+        public async Task<ActionResult<List<GetCompaniesDTO>>> GetCompanies()
         {
             var companies = await _companyManagement.GetCompaniesAsync();
             return Ok(companies);
         }
 
         [HttpGet("Companies/{companyName}")]
-        public async Task<ActionResult<CompanyManagementDTO>> GetCompany(string companyName)
+        public async Task<ActionResult<GetCompaniesDTO>> GetCompany(string companyName)
         {
             try
             {

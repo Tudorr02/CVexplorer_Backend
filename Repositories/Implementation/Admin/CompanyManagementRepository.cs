@@ -9,19 +9,20 @@ namespace CVexplorer.Repositories.Implementation.Admin
 {
     public class CompanyManagementRepository(DataContext _context) : ICompanyManagement
     {
-        public async Task<List<CompanyManagementDTO>> GetCompaniesAsync()
+        public async Task<List<GetCompaniesDTO>> GetCompaniesAsync()
         {
             var companies = await _context.Companies
               .Include(c => c.Departments) // Ensure departments are loaded
               .ToListAsync();
 
-            return companies.Select(c => new CompanyManagementDTO
+            return companies.Select(c => new GetCompaniesDTO
             {
                 Name = c.Name,
-          
+                Employees = _context.Users.Count(u => u.CompanyId == c.Id),
+
             }).ToList();
         }
-        public async Task<CompanyManagementDTO> GetCompanyAsync(string companyName)
+        public async Task<GetCompaniesDTO> GetCompanyAsync(string companyName)
         {
             var company = await _context.Companies
                 .Include(c => c.Departments)
@@ -29,9 +30,10 @@ namespace CVexplorer.Repositories.Implementation.Admin
 
             if (company == null) throw new NotFoundException("Company not found !");
 
-            return new CompanyManagementDTO
+            return new GetCompaniesDTO
             {
-                Name = company.Name
+                Name = company.Name,
+                Employees = _context.Users.Count(u => u.CompanyId == company.Id)
             };
         }
         // ✅ Update a company
