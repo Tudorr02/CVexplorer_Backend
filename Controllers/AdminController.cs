@@ -33,6 +33,22 @@ namespace CVexplorer.Controllers
         {
             try
             {
+                var currentUser = await _userManager.GetUserAsync(User);
+                var userRoles = await _userManager.GetRolesAsync(currentUser);
+
+                bool isModerator = userRoles.Contains("Moderator") && !userRoles.Contains("Admin");
+
+                // ✅ Prevent Moderators from assigning Admin role
+                if (isModerator && dto.UserRoles.Contains("Admin"))
+                {
+                    return Forbid("You are not allowed to assign the Admin role.");
+                }
+
+                if (username.ToLower() == "admin")
+                {
+                    return Forbid(); // Prevent modifications to the "admin" user
+                }
+
                 var updatedUser = await _userManagement.UpdateUserAsync(username,dto);
                 return Ok(updatedUser); // Returns updated user details
             }
@@ -70,6 +86,11 @@ namespace CVexplorer.Controllers
         {
             try
             {
+                if (username.ToLower() == "admin")
+                {
+                    return Forbid(); // Prevent deletion of the "admin" user
+                }
+
                 var deletedUser = await _userManagement.DeleteUserAsync(username);
                 return Ok(deletedUser); // Returns deleted user details
             }
