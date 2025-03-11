@@ -5,7 +5,7 @@
 namespace CVexplorer.Migrations
 {
     /// <inheritdoc />
-    public partial class AddPart1_Modification2 : Migration
+    public partial class Companies1 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

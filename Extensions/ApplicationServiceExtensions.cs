@@ -1,11 +1,8 @@
 ﻿using CVexplorer.Data;
-using CVexplorer.Models.Domain;
 using CVexplorer.Repositories.Implementation;
 using CVexplorer.Repositories.Implementation.Admin;
 using CVexplorer.Repositories.Interface;
 using CVexplorer.Repositories.Interface.Admin;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace CVexplorer.Extensions
@@ -17,7 +14,7 @@ namespace CVexplorer.Extensions
             services.AddControllers();
             services.AddDbContext<DataContext>(opt =>
             {
-                opt.UseSqlServer(configuration.GetConnectionString("LocalConnection"));
+                opt.UseSqlServer(configuration.GetConnectionString("LocalConnectionPC"));
             });
             services.AddCors();
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());

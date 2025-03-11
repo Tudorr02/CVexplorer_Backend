@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CVexplorer.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20250124200100_Init")]
+    [Migration("20250310121745_Init")]
     partial class Init
     {
         /// <inheritdoc />
@@ -24,6 +24,67 @@ namespace CVexplorer.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("CVexplorer.Models.Domain.Company", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Companies");
+                });
+
+            modelBuilder.Entity("CVexplorer.Models.Domain.Department", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.ToTable("Departments");
+                });
+
+            modelBuilder.Entity("CVexplorer.Models.Domain.Position", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DepartmentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DepartmentId");
+
+                    b.ToTable("Positions");
+                });
 
             modelBuilder.Entity("CVexplorer.Models.Domain.Role", b =>
                 {
@@ -66,8 +127,8 @@ namespace CVexplorer.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
 
-                    b.Property<string>("CompanyName")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int?>("CompanyId")
+                        .HasColumnType("int");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
@@ -121,6 +182,8 @@ namespace CVexplorer.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CompanyId");
+
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
 
@@ -130,6 +193,29 @@ namespace CVexplorer.Migrations
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("CVexplorer.Models.Domain.UserDepartmentAccess", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DepartmentId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DepartmentId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserDepartmentAccesses");
                 });
 
             modelBuilder.Entity("CVexplorer.Models.Domain.UserRole", b =>
@@ -235,6 +321,57 @@ namespace CVexplorer.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("CVexplorer.Models.Domain.Department", b =>
+                {
+                    b.HasOne("CVexplorer.Models.Domain.Company", "Company")
+                        .WithMany("Departments")
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Company");
+                });
+
+            modelBuilder.Entity("CVexplorer.Models.Domain.Position", b =>
+                {
+                    b.HasOne("CVexplorer.Models.Domain.Department", "Department")
+                        .WithMany("Positions")
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Department");
+                });
+
+            modelBuilder.Entity("CVexplorer.Models.Domain.User", b =>
+                {
+                    b.HasOne("CVexplorer.Models.Domain.Company", "Company")
+                        .WithMany("Users")
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Company");
+                });
+
+            modelBuilder.Entity("CVexplorer.Models.Domain.UserDepartmentAccess", b =>
+                {
+                    b.HasOne("CVexplorer.Models.Domain.Department", "Department")
+                        .WithMany("UserDepartmentAccesses")
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CVexplorer.Models.Domain.User", "User")
+                        .WithMany("UserDepartmentAccesses")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Department");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("CVexplorer.Models.Domain.UserRole", b =>
                 {
                     b.HasOne("CVexplorer.Models.Domain.Role", "Role")
@@ -290,6 +427,20 @@ namespace CVexplorer.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("CVexplorer.Models.Domain.Company", b =>
+                {
+                    b.Navigation("Departments");
+
+                    b.Navigation("Users");
+                });
+
+            modelBuilder.Entity("CVexplorer.Models.Domain.Department", b =>
+                {
+                    b.Navigation("Positions");
+
+                    b.Navigation("UserDepartmentAccesses");
+                });
+
             modelBuilder.Entity("CVexplorer.Models.Domain.Role", b =>
                 {
                     b.Navigation("UserRoles");
@@ -297,6 +448,8 @@ namespace CVexplorer.Migrations
 
             modelBuilder.Entity("CVexplorer.Models.Domain.User", b =>
                 {
+                    b.Navigation("UserDepartmentAccesses");
+
                     b.Navigation("UserRoles");
                 });
 #pragma warning restore 612, 618

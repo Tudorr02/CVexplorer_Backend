@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CVexplorer.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20250227151233_CompanyName")]
-    partial class CompanyName
+    [Migration("20250310121828_Companies1")]
+    partial class Companies1
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -346,8 +346,9 @@ namespace CVexplorer.Migrations
             modelBuilder.Entity("CVexplorer.Models.Domain.User", b =>
                 {
                     b.HasOne("CVexplorer.Models.Domain.Company", "Company")
-                        .WithMany()
-                        .HasForeignKey("CompanyId");
+                        .WithMany("Users")
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Company");
                 });
@@ -429,6 +430,8 @@ namespace CVexplorer.Migrations
             modelBuilder.Entity("CVexplorer.Models.Domain.Company", b =>
                 {
                     b.Navigation("Departments");
+
+                    b.Navigation("Users");
                 });
 
             modelBuilder.Entity("CVexplorer.Models.Domain.Department", b =>

@@ -60,7 +60,7 @@ namespace CVexplorer.Repositories.Implementation.Admin
         // ✅ Delete a company
         public async Task<bool> DeleteCompanyAsync(string companyName)
         {
-            var company = await _context.Companies.FirstOrDefaultAsync(c => c.Name == companyName);
+            var company = await _context.Companies.Include(c => c.Users).FirstOrDefaultAsync(c => c.Name == companyName);
             if (company == null) throw new NotFoundException("Company not found !");
 
             _context.Companies.Remove(company);
