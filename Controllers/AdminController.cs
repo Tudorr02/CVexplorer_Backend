@@ -15,10 +15,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CVexplorer.Controllers
 {
-    [Authorize(Policy = "RequireModeratorRole")] // ✅ Restrict access to Admins only
+    [Authorize(Policy = "RequireModeratorRole")]
     [ApiController]
     [Route("api/[controller]")]
-    public class AdminController(DataContext _context,UserManager<User> _userManager, IDepartmentManagement _departmentManagement ,ICompanyManagement _companyManagement ,IUserManagement _userManagement , IMapper _mapper , ITokenService _tokenService) : Controller
+    public class AdminController(DataContext _context,UserManager<User> _userManager, IDepartmentManagementRepository _departmentManagement ,ICompanyManagement _companyManagement ,IUserManagement _userManagement , IMapper _mapper , ITokenService _tokenService) : Controller
     {
         [HttpGet("Users")]
         public async Task<ActionResult<List<UserManagementDTO>>> GetUsers()
@@ -220,6 +220,15 @@ namespace CVexplorer.Controllers
         {
             try
             {
+                // Check if a company with the same name already exists
+                var existingCompany = await _context.Companies
+                    .FirstOrDefaultAsync(c => c.Name.ToLower() == dto.Name.ToLower());
+
+                if (existingCompany != null)
+                {
+                    return BadRequest(new { error = $"A company with the name '{dto.Name}' already exists." });
+                }
+
                 var company = await _companyManagement.CreateCompanyAsync(dto);
                 return Ok(company); // Returns created company details
             }
@@ -228,6 +237,7 @@ namespace CVexplorer.Controllers
                 return BadRequest(new { error = ex.Message }); //  400 for other failures
             }
         }
+        
 
         [HttpGet("Roles")]
         public async Task<ActionResult<List<string>>> GetRoles()

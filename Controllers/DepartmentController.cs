@@ -9,7 +9,7 @@ using System.Security.Claims;
 
 namespace CVexplorer.Controllers
 {
-    public class DepartmentController(IDepartmentManagement _departmentManagement , UserManager<User> _userManager) : Controller
+    public class DepartmentController(IDepartmentManagementRepository _departmentManagement , UserManager<User> _userManager) : Controller
     {
 
         [HttpGet("{companyName}/departments")]

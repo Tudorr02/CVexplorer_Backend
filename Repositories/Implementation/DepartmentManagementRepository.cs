@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CVexplorer.Repositories.Implementation
 {
-    public class DepartmentManagementRepository(DataContext _context) : IDepartmentManagement
+    public class DepartmentManagementRepository(DataContext _context) : IDepartmentManagementRepository
     {
         // ✅ Get departments for a user (filters by `UserDepartmentAccess`)
         public async Task<List<DepartmentManagementDTO>> GetDepartmentsAsync(string companyName, int userId, bool hrLeader)

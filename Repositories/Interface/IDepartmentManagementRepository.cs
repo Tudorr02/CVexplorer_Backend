@@ -2,7 +2,7 @@
 
 namespace CVexplorer.Repositories.Interface
 {
-    public interface IDepartmentManagement
+    public interface IDepartmentManagementRepository
     {
         Task<List<DepartmentManagementDTO>> GetDepartmentsAsync(string companyName, int userId , bool hrLeader);
         Task<DepartmentManagementDTO?> GetDepartmentAsync(string companyName, string departmentName); // ✅ Fetch department by name & company

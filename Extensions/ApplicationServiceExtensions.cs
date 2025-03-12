@@ -22,8 +22,8 @@ namespace CVexplorer.Extensions
             services.AddScoped<IUserDetailsRepository, UserDetailsRepository>();
             services.AddScoped<IUserManagement, UserManagementRepository>();
             services.AddScoped<ICompanyManagement, CompanyManagementRepository>();
-            services.AddScoped<IDepartmentManagement,DepartmentManagementRepository>();
-
+            services.AddScoped<IDepartmentManagementRepository,DepartmentManagementRepository>();
+            services.AddScoped<ICompanyUserRepository, CompanyUserRepository>();
         
             
 
