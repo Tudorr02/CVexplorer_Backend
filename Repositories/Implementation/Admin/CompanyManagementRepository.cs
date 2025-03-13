@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CVexplorer.Repositories.Implementation.Admin
 {
-    public class CompanyManagementRepository(DataContext _context) : ICompanyManagement
+    public class CompanyManagementRepository(DataContext _context) : ICompanyManagementRepository
     {
         public async Task<List<GetCompaniesDTO>> GetCompaniesAsync()
         {

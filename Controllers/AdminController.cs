@@ -18,7 +18,7 @@ namespace CVexplorer.Controllers
     [Authorize(Policy = "RequireModeratorRole")]
     [ApiController]
     [Route("api/[controller]")]
-    public class AdminController(DataContext _context,UserManager<User> _userManager, IDepartmentManagementRepository _departmentManagement ,ICompanyManagement _companyManagement ,IUserManagement _userManagement , IMapper _mapper , ITokenService _tokenService) : Controller
+    public class AdminController(DataContext _context,UserManager<User> _userManager, IDepartmentManagementRepository _departmentManagement ,ICompanyManagementRepository _companyManagement ,IUserManagementRepository _userManagement , IMapper _mapper , ITokenService _tokenService) : Controller
     {
         [HttpGet("Users")]
         public async Task<ActionResult<List<UserManagementDTO>>> GetUsers()
@@ -29,7 +29,7 @@ namespace CVexplorer.Controllers
         }
 
         [HttpPut("Users/{username}")]
-        public async Task<IActionResult> UpdateUser(string username,[FromBody] UserManagementDTO dto)
+        public async Task<ActionResult<UserManagementDTO>> UpdateUser(string username,[FromBody] UserManagementDTO dto)
         {
             try
             {
@@ -105,54 +105,72 @@ namespace CVexplorer.Controllers
         }
 
         [HttpPost("Users")]
-        public async Task<ActionResult<UserDTO>> EnrollUser(UserEnrollmentDTO dto)
+        public async Task<ActionResult<AccountDTO>> EnrollUser(UserEnrollmentDTO dto)
         {
-            if (await UserExists(dto.Username))
-                return BadRequest("Username is taken");
+            //if (await UserExists(dto.Username))
+            //    return BadRequest("Username is taken");
 
-            // ✅ Validate company before creating user
-            int? companyId = null;
-            if (!string.IsNullOrWhiteSpace(dto.CompanyName))
+            //// ✅ Validate company before creating user
+            //int? companyId = null;
+            //if (!string.IsNullOrWhiteSpace(dto.CompanyName))
+            //{
+            //    var company = await _context.Companies.FirstOrDefaultAsync(c => c.Name == dto.CompanyName);
+            //    if (company == null)
+            //        return BadRequest($"Company '{dto.CompanyName}' not found");
+
+            //    companyId = company.Id; // ✅ Store company ID
+            //}
+
+            //// ✅ Validate roles before creating user
+            //var rolesToAssign = dto.UserRoles != null && dto.UserRoles.Any() ? dto.UserRoles : new List<string> { "HRUser" };
+            //var validRoles = await _context.Roles.Select(r => r.Name).ToListAsync();
+            //var invalidRoles = rolesToAssign.Except(validRoles).ToList();
+
+            //if (invalidRoles.Any())
+            //    return BadRequest($"Invalid roles: {string.Join(", ", invalidRoles)}");
+
+            //// ✅ Create the user only after validations pass
+            //var user = _mapper.Map<User>(dto);
+            //user.UserName = dto.Username.ToLower();
+            //user.CompanyId = companyId; // ✅ Assign validated company
+
+            //var result = await _userManager.CreateAsync(user, dto.Password);
+            //if (!result.Succeeded)
+            //    return BadRequest($"Failed to register: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+
+            //var addRolesResult = await _userManager.AddToRolesAsync(user, rolesToAssign);
+            //if (!addRolesResult.Succeeded)
+            //    return BadRequest("Failed to assign roles.");
+
+            //return new AccountDTO
+            //{
+            //    Username = user.UserName,
+            //    Token = await _tokenService.CreateToken(user),
+            //};
+
+            try
             {
-                var company = await _context.Companies.FirstOrDefaultAsync(c => c.Name == dto.CompanyName);
-                if (company == null)
-                    return BadRequest($"Company '{dto.CompanyName}' not found");
-
-                companyId = company.Id; // ✅ Store company ID
+                var result = await _userManagement.EnrollUserAsync(dto);
+                return Ok(result);
             }
-
-            // ✅ Validate roles before creating user
-            var rolesToAssign = dto.UserRoles != null && dto.UserRoles.Any() ? dto.UserRoles : new List<string> { "HRUser" };
-            var validRoles = await _context.Roles.Select(r => r.Name).ToListAsync();
-            var invalidRoles = rolesToAssign.Except(validRoles).ToList();
-
-            if (invalidRoles.Any())
-                return BadRequest($"Invalid roles: {string.Join(", ", invalidRoles)}");
-
-            // ✅ Create the user only after validations pass
-            var user = _mapper.Map<User>(dto);
-            user.UserName = dto.Username.ToLower();
-            user.CompanyId = companyId; // ✅ Assign validated company
-
-            var result = await _userManager.CreateAsync(user, dto.Password);
-            if (!result.Succeeded)
-                return BadRequest($"Failed to register: {string.Join(", ", result.Errors.Select(e => e.Description))}");
-
-            var addRolesResult = await _userManager.AddToRolesAsync(user, rolesToAssign);
-            if (!addRolesResult.Succeeded)
-                return BadRequest("Failed to assign roles.");
-
-            return new UserDTO
+            catch (ArgumentException ex)
             {
-                Username = user.UserName,
-                Token = await _tokenService.CreateToken(user),
-            };
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "An unexpected error occurred." });
+            }
         }
 
-        private async Task<bool> UserExists(string username)
-        {
-            return await _userManager.Users.AnyAsync(x => x.NormalizedUserName.ToLower() == username.ToLower());
-        }
+        //private async Task<bool> UserExists(string username)
+        //{
+        //    return await _userManager.Users.AnyAsync(x => x.NormalizedUserName.ToLower() == username.ToLower());
+        //}
 
         [HttpGet("Companies")]
         public async Task<ActionResult<List<GetCompaniesDTO>>> GetCompanies()

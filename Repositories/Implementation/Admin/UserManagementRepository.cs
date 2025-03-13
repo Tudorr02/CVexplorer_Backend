@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CVexplorer.Repositories.Implementation.Admin
 {
-    public class UserManagementRepository (UserManager<User> _userManager , DataContext _context , IMapper _mapper) : IUserManagement
+    public class UserManagementRepository (UserManager<User> _userManager , DataContext _context , IMapper _mapper , ITokenService _tokenService) : IUserManagementRepository
     {
         public async Task<List<UserManagementDTO>> GetUsersAsync()
         {
@@ -198,7 +198,56 @@ namespace CVexplorer.Repositories.Implementation.Admin
             };
         }
 
-        
+        public async Task<AccountDTO> EnrollUserAsync(UserEnrollmentDTO dto)
+        {
+            if (await UserExists(dto.Username))
+                throw new ArgumentException("Username is taken");
+
+            // ✅ Validate company before creating user
+            int? companyId = null;
+            if (!string.IsNullOrWhiteSpace(dto.CompanyName))
+            {
+                var company = await _context.Companies.FirstOrDefaultAsync(c => c.Name == dto.CompanyName);
+                if (company == null)
+                    throw new ArgumentException($"Company '{dto.CompanyName}' not found");
+
+                companyId = company.Id; // ✅ Store company ID
+            }
+
+            // ✅ Validate roles before creating user
+            var rolesToAssign = dto.UserRoles != null && dto.UserRoles.Any() ? dto.UserRoles : new List<string> { "HRUser" };
+            var validRoles = await _context.Roles.Select(r => r.Name).ToListAsync();
+            var invalidRoles = rolesToAssign.Except(validRoles).ToList();
+
+            if (invalidRoles.Any())
+                throw new ArgumentException($"Invalid roles: {string.Join(", ", invalidRoles)}");
+
+            // ✅ Create the user only after validations pass
+            var user = _mapper.Map<User>(dto);
+            user.UserName = dto.Username.ToLower();
+            user.CompanyId = companyId; // ✅ Assign validated company
+
+            var result = await _userManager.CreateAsync(user, dto.Password);
+            if (!result.Succeeded)
+                throw new InvalidOperationException($"Failed to register: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+
+            var addRolesResult = await _userManager.AddToRolesAsync(user, rolesToAssign);
+            if (!addRolesResult.Succeeded)
+                throw new InvalidOperationException("Failed to assign roles.");
+
+            return new AccountDTO
+            {
+                Username = user.UserName,
+                Token = await _tokenService.CreateToken(user),
+            };
+        }
+
+        private async Task<bool> UserExists(string username)
+        {
+            return await _userManager.Users.AnyAsync(x => x.NormalizedUserName.ToLower() == username.ToLower());
+        }
+
+
 
     }
 }

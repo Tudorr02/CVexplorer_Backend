@@ -23,7 +23,7 @@ namespace CVexplorer.Controllers
 
         [Authorize(Policy = "RequireHRLeaderRole")]
         [HttpGet()]
-        public async Task<ActionResult<List<CompanyUserDTO>>> GetUsersByCompany([Required]string companyName)
+        public async Task<ActionResult<List<CompanyUserDTO>>> GetCompanyUsers()
         {
             try
             {
@@ -39,12 +39,12 @@ namespace CVexplorer.Controllers
 
                 
                 
-                if (hrLeader.Company == null || !hrLeader.Company.Name.Equals(companyName))
+                if (hrLeader.Company == null)
                 {
                     return Forbid();
                 }
 
-                var users = await _companyUser.GetUsersByCompanyAsync(companyName);
+                var users = await _companyUser.GetUsersByCompanyAsync(hrLeader.Company.Name);
                 return Ok(users);
             }
             catch (NotFoundException ex)

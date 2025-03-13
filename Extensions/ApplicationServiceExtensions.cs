@@ -20,8 +20,8 @@ namespace CVexplorer.Extensions
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
             services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IUserDetailsRepository, UserDetailsRepository>();
-            services.AddScoped<IUserManagement, UserManagementRepository>();
-            services.AddScoped<ICompanyManagement, CompanyManagementRepository>();
+            services.AddScoped<IUserManagementRepository, UserManagementRepository>();
+            services.AddScoped<ICompanyManagementRepository, CompanyManagementRepository>();
             services.AddScoped<IDepartmentManagementRepository,DepartmentManagementRepository>();
             services.AddScoped<ICompanyUserRepository, CompanyUserRepository>();
         

@@ -2,7 +2,7 @@
 
 namespace CVexplorer.Repositories.Interface.Admin
 {
-    public interface ICompanyManagement
+    public interface ICompanyManagementRepository
     {
         Task<List<GetCompaniesDTO>> GetCompaniesAsync();
         Task<GetCompaniesDTO> GetCompanyAsync(string companyName);

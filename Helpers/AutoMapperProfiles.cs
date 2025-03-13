@@ -9,7 +9,7 @@ namespace CVexplorer.Helpers
     {
         public AutoMapperProfiles()
         {
-            CreateMap<User, UserDTO>();
+            CreateMap<User, AccountDTO>();
             CreateMap<UserEnrollmentDTO, User>()
                 .ForMember(dest => dest.UserRoles, opt => opt.Ignore())// ❌ Ignore roles, handled separately
                 .ForMember(dest => dest.CompanyId, opt => opt.Ignore()) // ❌ Ignore CompanyId, set it in repository

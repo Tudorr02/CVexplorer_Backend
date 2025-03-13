@@ -4,11 +4,13 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace CVexplorer.Repositories.Interface.Admin
 {
-    public interface IUserManagement
+    public interface IUserManagementRepository
     {
         Task<List<UserManagementDTO>> GetUsersAsync();
         Task<UserManagementDTO> GetUserAsync(string username);
         Task<UserManagementDTO> UpdateUserAsync(string username ,UserManagementDTO dto);
         Task<UserManagementDTO> DeleteUserAsync(string username);
+        Task<AccountDTO> EnrollUserAsync(UserEnrollmentDTO dto);
+       
     }
 }

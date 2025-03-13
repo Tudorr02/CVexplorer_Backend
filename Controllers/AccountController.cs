@@ -14,7 +14,7 @@ namespace CVexplorer.Controllers
     public class AccountController(UserManager<User> userManager, ITokenService tokenService, IMapper mapper) : Controller
     {
         [HttpPost("Login")]
-        public async Task<ActionResult<UserDTO>> Login(LoginDTO loginDto)
+        public async Task<ActionResult<AccountDTO>> Login(LoginDTO loginDto)
         {
             var user = await userManager.Users.SingleOrDefaultAsync(x => x.NormalizedUserName == loginDto.Username.ToUpper());
 
@@ -25,7 +25,7 @@ namespace CVexplorer.Controllers
             if (!result) return Unauthorized("Invalid username or password !");
 
 
-            return new UserDTO
+            return new AccountDTO
             {
                 Username = user.UserName,
                 Token = await tokenService.CreateToken(user),
