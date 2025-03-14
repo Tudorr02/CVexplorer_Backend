@@ -3,7 +3,6 @@ using CVexplorer.Data;
 using CVexplorer.Exceptions;
 using CVexplorer.Models.Domain;
 using CVexplorer.Models.DTO;
-using CVexplorer.Models.DTO.Admin;
 using CVexplorer.Repositories.Implementation;
 using CVexplorer.Repositories.Implementation.Admin;
 using CVexplorer.Repositories.Interface;
@@ -21,15 +20,15 @@ namespace CVexplorer.Controllers
     public class AdminController(DataContext _context,UserManager<User> _userManager, IDepartmentManagementRepository _departmentManagement ,ICompanyManagementRepository _companyManagement ,IUserManagementRepository _userManagement , IMapper _mapper , ITokenService _tokenService) : Controller
     {
         [HttpGet("Users")]
-        public async Task<ActionResult<List<UserManagementDTO>>> GetUsers()
+        public async Task<ActionResult<List<UserManagementListDTO>>> GetUsers()
         {
             var users = await  _userManagement.GetUsersAsync();
             return Ok(users);
 
         }
 
-        [HttpPut("Users/{username}")]
-        public async Task<ActionResult<UserManagementDTO>> UpdateUser(string username,[FromBody] UserManagementDTO dto)
+        [HttpPut("Users/{userId:int}")]
+        public async Task<ActionResult<UserManagementDTO>> UpdateUser(int userId, [FromBody] UserManagementDTO dto)
         {
             try
             {
@@ -44,12 +43,18 @@ namespace CVexplorer.Controllers
                     return Forbid("You are not allowed to assign the Admin role.");
                 }
 
-                if (username.ToLower() == "admin")
+                // ✅ Prevent modifications to the built-in "admin" user
+                var userToUpdate = await _userManager.FindByIdAsync(userId.ToString());
+                if (userToUpdate == null)
                 {
-                    return Forbid(); // Prevent modifications to the "admin" user
+                    return NotFound(new { error = "User not found" });
+                }
+                if (userToUpdate.UserName.ToLower() == "admin")
+                {
+                    return Forbid();
                 }
 
-                var updatedUser = await _userManagement.UpdateUserAsync(username,dto);
+                var updatedUser = await _userManagement.UpdateUserAsync(userId,dto);
                 return Ok(updatedUser); // Returns updated user details
             }
             catch (NotFoundException ex)
@@ -62,36 +67,23 @@ namespace CVexplorer.Controllers
             }
         }
 
-        [HttpGet("Users/{username}")]
-        public async Task<ActionResult<UserManagementDTO>> GetUser(string username)
+        [HttpDelete("Users/{userId:int}")]
+        public async Task<IActionResult> DeleteUser(int userId)
         {
             try
             {
-                var user = await _userManagement.GetUserAsync(username);
-                return Ok(user);
-            }
-            catch (NotFoundException ex)
-            {
-                return NotFound(new { error = ex.Message }); // 404 if user not found
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message }); //  400 for other failures
-            }
+                var userToDelete = await _userManager.FindByIdAsync(userId.ToString());
 
-        }
+                if (userToDelete == null)
+                {
+                    return NotFound(new { error = "User not found" });
+                }
 
-        [HttpDelete("Users/{username}")]
-        public async Task<IActionResult> DeleteUser(string username)
-        {
-            try
-            {
-                if (username.ToLower() == "admin")
+                if (userToDelete.UserName?.ToLower() == "admin")
                 {
                     return Forbid(); // Prevent deletion of the "admin" user
                 }
-
-                var deletedUser = await _userManagement.DeleteUserAsync(username);
+                var deletedUser = await _userManagement.DeleteUserAsync(userId);
                 return Ok(deletedUser); // Returns deleted user details
             }
             catch (NotFoundException ex)
@@ -105,49 +97,8 @@ namespace CVexplorer.Controllers
         }
 
         [HttpPost("Users")]
-        public async Task<ActionResult<AccountDTO>> EnrollUser(UserEnrollmentDTO dto)
+        public async Task<ActionResult<AccountDTO>> EnrollUser(UserEnrollDTO dto)
         {
-            //if (await UserExists(dto.Username))
-            //    return BadRequest("Username is taken");
-
-            //// ✅ Validate company before creating user
-            //int? companyId = null;
-            //if (!string.IsNullOrWhiteSpace(dto.CompanyName))
-            //{
-            //    var company = await _context.Companies.FirstOrDefaultAsync(c => c.Name == dto.CompanyName);
-            //    if (company == null)
-            //        return BadRequest($"Company '{dto.CompanyName}' not found");
-
-            //    companyId = company.Id; // ✅ Store company ID
-            //}
-
-            //// ✅ Validate roles before creating user
-            //var rolesToAssign = dto.UserRoles != null && dto.UserRoles.Any() ? dto.UserRoles : new List<string> { "HRUser" };
-            //var validRoles = await _context.Roles.Select(r => r.Name).ToListAsync();
-            //var invalidRoles = rolesToAssign.Except(validRoles).ToList();
-
-            //if (invalidRoles.Any())
-            //    return BadRequest($"Invalid roles: {string.Join(", ", invalidRoles)}");
-
-            //// ✅ Create the user only after validations pass
-            //var user = _mapper.Map<User>(dto);
-            //user.UserName = dto.Username.ToLower();
-            //user.CompanyId = companyId; // ✅ Assign validated company
-
-            //var result = await _userManager.CreateAsync(user, dto.Password);
-            //if (!result.Succeeded)
-            //    return BadRequest($"Failed to register: {string.Join(", ", result.Errors.Select(e => e.Description))}");
-
-            //var addRolesResult = await _userManager.AddToRolesAsync(user, rolesToAssign);
-            //if (!addRolesResult.Succeeded)
-            //    return BadRequest("Failed to assign roles.");
-
-            //return new AccountDTO
-            //{
-            //    Username = user.UserName,
-            //    Token = await _tokenService.CreateToken(user),
-            //};
-
             try
             {
                 var result = await _userManagement.EnrollUserAsync(dto);
@@ -167,42 +118,20 @@ namespace CVexplorer.Controllers
             }
         }
 
-        //private async Task<bool> UserExists(string username)
-        //{
-        //    return await _userManager.Users.AnyAsync(x => x.NormalizedUserName.ToLower() == username.ToLower());
-        //}
 
         [HttpGet("Companies")]
-        public async Task<ActionResult<List<GetCompaniesDTO>>> GetCompanies()
+        public async Task<ActionResult<List<CompanyManagementListDTO>>> GetCompanies()
         {
             var companies = await _companyManagement.GetCompaniesAsync();
             return Ok(companies);
         }
 
-        [HttpGet("Companies/{companyName}")]
-        public async Task<ActionResult<GetCompaniesDTO>> GetCompany(string companyName)
+        [HttpPut("Companies/{companyId:int}")]
+        public async Task<ActionResult<CompanyManagementDTO>> UpdateCompany(int companyId, [FromBody] CompanyManagementDTO dto)
         {
             try
             {
-                var company = await _companyManagement.GetCompanyAsync(companyName);
-                return Ok(company);
-            }
-            catch (NotFoundException ex)
-            {
-                return NotFound(new { error = ex.Message }); // 404 if company not found
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message }); //  400 for other failures
-            }
-        }
-
-        [HttpPut("Companies/{companyName}")]
-        public async Task<IActionResult> UpdateCompany(string companyName, [FromBody] CompanyManagementDTO dto)
-        {
-            try
-            {
-                var updatedCompany = await _companyManagement.UpdateCompanyAsync(companyName, dto);
+                var updatedCompany = await _companyManagement.UpdateCompanyAsync(companyId, dto);
                 return Ok(updatedCompany); // Returns updated company details
             }
             catch (NotFoundException ex)
@@ -215,12 +144,12 @@ namespace CVexplorer.Controllers
             }
         }
 
-        [HttpDelete("Companies/{companyName}")]
-        public async Task<IActionResult> DeleteCompany(string companyName)
+        [HttpDelete("Companies/{companyId:int}")]
+        public async Task<IActionResult> DeleteCompany(int companyId)
         {
             try
             {
-                var isDeleted = await _companyManagement.DeleteCompanyAsync(companyName);
+                var isDeleted = await _companyManagement.DeleteCompanyAsync(companyId);
                 return Ok(isDeleted); // Returns true if company is deleted
             }
             catch (NotFoundException ex)

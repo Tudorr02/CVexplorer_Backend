@@ -1,4 +1,4 @@
-﻿namespace CVexplorer.Models.DTO.Admin
+﻿namespace CVexplorer.Models.DTO
 {
     public class CompanyManagementDTO
     {

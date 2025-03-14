@@ -3,7 +3,7 @@ using CVexplorer.Data;
 using CVexplorer.Exceptions;
 using CVexplorer.Models.Domain;
 using CVexplorer.Models.DTO;
-using CVexplorer.Models.DTO.Admin;
+
 using CVexplorer.Repositories.Implementation;
 using CVexplorer.Repositories.Interface;
 using Microsoft.AspNetCore.Authorization;
@@ -18,33 +18,28 @@ namespace CVexplorer.Controllers
     [Authorize(Policy = "RequireAllRoles")]
     [ApiController]
     [Route("api/[controller]")]
-    public class UsersController(IUserDetailsRepository _userDetails, UserManager<User> _userManager , ICompanyUserRepository _companyUser, DataContext _context) : Controller
+    public class UsersController(IUserDetailsRepository _userDetails, UserManager<User> _userManager , IUserRepository _userRepository, DataContext _context) : Controller
     {
 
         [Authorize(Policy = "RequireHRLeaderRole")]
-        [HttpGet()]
-        public async Task<ActionResult<List<CompanyUserDTO>>> GetCompanyUsers()
+        [HttpGet]
+        public async Task<ActionResult<List<UserListDTO>>> GetUsers()
         {
             try
-            {
-
-                var hrLeader = await _context.Users
-                    .Include(u => u.Company) 
-                    .FirstOrDefaultAsync(u => u.Id == Convert.ToInt32(_userManager.GetUserId(User)));
+            {  
+                var hrLeader = await _userManager.GetUserAsync(User);
 
                 if (hrLeader == null)
                 {
                     return Unauthorized(new { error = "User not found or not authenticated." });
                 }
 
-                
-                
-                if (hrLeader.Company == null)
+                if (hrLeader.CompanyId == null)
                 {
                     return Forbid();
                 }
 
-                var users = await _companyUser.GetUsersByCompanyAsync(hrLeader.Company.Name);
+                var users = await _userRepository.GetUsersAsync((int)hrLeader.CompanyId);
                 return Ok(users);
             }
             catch (NotFoundException ex)
@@ -56,7 +51,59 @@ namespace CVexplorer.Controllers
                 return BadRequest(new { error = ex.Message }); // 400 for other failures
             }
         }
-        
+
+        [Authorize(Policy = "RequireHRLeaderRole")]
+        [HttpPut("{userId}")]
+        public async Task<ActionResult<UserDTO>> UpdateUser(int userId, [FromBody] UserDTO dto)
+        {
+            try
+            {
+                var hrLeader = await _userManager.GetUserAsync(User);
+
+                if (hrLeader == null)
+                {
+                    return Unauthorized(new { error = "User not found or not authenticated." });
+                }
+
+                if (hrLeader.CompanyId == null)
+                {
+                    return Forbid();
+                }
+
+                // ✅ Ensure the user exists
+                var userToUpdate = await _userManager.Users
+                    .FirstOrDefaultAsync(u => u.Id == userId);
+
+                if (userToUpdate == null)
+                {
+                    return NotFound(new { error = "User not found." });
+                }
+
+                // ✅ Ensure the user belongs to the same company as HR Leader
+                if (userToUpdate.CompanyId != hrLeader.CompanyId)
+                {
+                    return Forbid(new { error = "You are not allowed to update this user." }.ToString());
+                }
+
+                // ✅ Call repository method with UserDTO
+                var updatedUser = await _userRepository.UpdateUserAsync(userId, dto);
+
+                return Ok(updatedUser); // Returns UserListDTO
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
         [HttpGet("Me")]
         public async Task<ActionResult<UserDetailsDTO>> GetUserDetails()
         {
