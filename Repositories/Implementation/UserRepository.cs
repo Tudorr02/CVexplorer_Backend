@@ -74,9 +74,20 @@ namespace CVexplorer.Repositories.Implementation
                 var validRoles = await _context.Roles.Select(r => r.Name).ToListAsync();
                 var invalidRoles = rolesToAdd.Except(validRoles).ToList();
 
+                // ✅ Define restricted roles that the HR Leader cannot assign
+                var restrictedRoles = new List<string> { "Admin", "Moderator" };
+
+
                 if (invalidRoles.Any())
                 {
                     throw new Exception($"Invalid roles: {string.Join(", ", invalidRoles)}");
+                }
+
+                // ✅ Check if HR Leader is trying to assign restricted roles
+                var attemptedRestrictedRoles = rolesToAdd.Intersect(restrictedRoles).ToList();
+                if (attemptedRestrictedRoles.Any())
+                {
+                    throw new UnauthorizedAccessException($"You are not allowed to assign these roles: {string.Join(", ", attemptedRestrictedRoles)}");
                 }
 
                 // ✅ Remove roles if necessary
@@ -124,6 +135,30 @@ namespace CVexplorer.Repositories.Implementation
             };
         }
 
+        public async Task<bool> DeleteUserAsync(int userId)
+        {
+            var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == userId);
 
+            if (user == null)
+            {
+                throw new NotFoundException("User not found.");
+            }
+
+            // ✅ Prevent deletion of Admins or Moderators
+            var userRoles = await _userManager.GetRolesAsync(user);
+            if (userRoles.Contains("Admin") || userRoles.Contains("Moderator"))
+            {
+                throw new UnauthorizedAccessException("You are not allowed to delete Admin or Moderator users.");
+            }
+
+            var result = await _userManager.DeleteAsync(user);
+
+            if (!result.Succeeded)
+            {
+                throw new Exception("Failed to delete user.");
+            }
+
+            return true;
+        }
     }
 }

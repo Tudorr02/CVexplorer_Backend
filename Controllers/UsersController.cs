@@ -20,6 +20,42 @@ namespace CVexplorer.Controllers
     [Route("api/[controller]")]
     public class UsersController(IUserDetailsRepository _userDetails, UserManager<User> _userManager , IUserRepository _userRepository, DataContext _context) : Controller
     {
+        [Authorize(Policy = "RequireHRLeaderRole")]
+        private async Task<bool> ValidateHRLeaderAsync(int? userId = null, UserDTO? dto = null)
+        {
+            // ✅ Ensure the HR leader (current logged-in user) exists
+            var hrLeader = await _userManager.GetUserAsync(User);
+            if (hrLeader == null)
+            {
+                throw new UnauthorizedAccessException("User not found or not authenticated.");
+            }
+
+            // ✅ Ensure the HR leader is assigned to a company
+            if (hrLeader.CompanyId == null)
+            {
+                throw new UnauthorizedAccessException("You are not assigned to a company.");
+            }
+
+            // ✅ If userId and dto are provided, validate the target user
+            if (userId.HasValue && dto != null)
+            {
+                var targetUser = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == userId.Value);
+
+                if (targetUser == null)
+                {
+                    throw new NotFoundException("User not found.");
+                }
+
+                // ✅ Ensure the user belongs to the same company as HR Leader
+                if (targetUser.CompanyId != hrLeader.CompanyId)
+                {
+                    throw new UnauthorizedAccessException("You are not allowed to modify this user.");
+                }
+            }
+
+            return true; // ✅ Validation passed
+        }
+
 
         [Authorize(Policy = "RequireHRLeaderRole")]
         [HttpGet]
@@ -29,15 +65,7 @@ namespace CVexplorer.Controllers
             {  
                 var hrLeader = await _userManager.GetUserAsync(User);
 
-                if (hrLeader == null)
-                {
-                    return Unauthorized(new { error = "User not found or not authenticated." });
-                }
-
-                if (hrLeader.CompanyId == null)
-                {
-                    return Forbid();
-                }
+                await ValidateHRLeaderAsync(); // ✅ Validate HR Leader
 
                 var users = await _userRepository.GetUsersAsync((int)hrLeader.CompanyId);
                 return Ok(users);
@@ -45,6 +73,10 @@ namespace CVexplorer.Controllers
             catch (NotFoundException ex)
             {
                 return NotFound(new { error = ex.Message }); // 404 if company not found
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { error = ex.Message });
             }
             catch (Exception ex)
             {
@@ -58,32 +90,7 @@ namespace CVexplorer.Controllers
         {
             try
             {
-                var hrLeader = await _userManager.GetUserAsync(User);
-
-                if (hrLeader == null)
-                {
-                    return Unauthorized(new { error = "User not found or not authenticated." });
-                }
-
-                if (hrLeader.CompanyId == null)
-                {
-                    return Forbid();
-                }
-
-                // ✅ Ensure the user exists
-                var userToUpdate = await _userManager.Users
-                    .FirstOrDefaultAsync(u => u.Id == userId);
-
-                if (userToUpdate == null)
-                {
-                    return NotFound(new { error = "User not found." });
-                }
-
-                // ✅ Ensure the user belongs to the same company as HR Leader
-                if (userToUpdate.CompanyId != hrLeader.CompanyId)
-                {
-                    return Forbid(new { error = "You are not allowed to update this user." }.ToString());
-                }
+                await ValidateHRLeaderAsync(userId, dto); // ✅ Validate HR Leader
 
                 // ✅ Call repository method with UserDTO
                 var updatedUser = await _userRepository.UpdateUserAsync(userId, dto);
@@ -96,7 +103,40 @@ namespace CVexplorer.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid();
+                return StatusCode(StatusCodes.Status403Forbidden, new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [Authorize(Policy = "RequireHRLeaderRole")]
+        [HttpDelete("{userId}")]
+        public async Task<IActionResult> DeleteUser(int userId)
+        {
+            try
+            {
+                // ✅ Validate the HR Leader and check if they can delete the user
+                await ValidateHRLeaderAsync(userId);
+
+                // ✅ Call repository method to delete the user
+                var isDeleted = await _userRepository.DeleteUserAsync(userId);
+
+                if (!isDeleted)
+                {
+                    return BadRequest(new { error = "Failed to delete user." });
+                }
+
+                return Ok(new { message = "User deleted successfully." });
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { error = ex.Message });
             }
             catch (Exception ex)
             {
