@@ -144,6 +144,44 @@ namespace CVexplorer.Controllers
             }
         }
 
+        [Authorize(Policy = "RequireHRLeaderRole")]
+        [HttpPost]
+        public async Task<ActionResult> EnrollUser([FromBody] UserEnrollDTO dto)
+        {
+            try
+            {
+                // ✅ Validate HR Leader
+                var hrLeader = await _userManager.GetUserAsync(User);
+
+                await ValidateHRLeaderAsync(); // ✅ Validate HR Leader
+
+                // ✅ Extract CompanyId from HR Leader
+                dto.CompanyName = hrLeader.CompanyId.ToString();
+
+                // ✅ Call the repository method to enroll the user
+                var result = await _userRepository.EnrollUserAsync((int)hrLeader.CompanyId,dto);
+
+                if(result.Equals(false))
+                {
+                    return BadRequest(new { error = "Failed to enroll user." });
+                }
+
+                return Ok(); // Returns the created user DTO
+            }
+            catch (ValidationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "An unexpected error occurred.", details = ex.Message });
+            }
+        }
+
         [HttpGet("Me")]
         public async Task<ActionResult<UserDetailsDTO>> GetUserDetails()
         {

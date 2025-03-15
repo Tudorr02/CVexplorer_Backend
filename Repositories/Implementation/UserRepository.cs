@@ -5,6 +5,7 @@ using CVexplorer.Models.DTO;
 using CVexplorer.Repositories.Interface;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 
 namespace CVexplorer.Repositories.Implementation
 {
@@ -160,5 +161,40 @@ namespace CVexplorer.Repositories.Implementation
 
             return true;
         }
+
+        public async Task<bool> EnrollUserAsync(int companyId, UserEnrollDTO dto)
+        {
+            if (await _userManager.FindByNameAsync(dto.Username.ToLower()) != null)
+            {
+                throw new ValidationException("Username is already taken.");
+            }
+
+            // ✅ Validate roles before creating user
+            var rolesToAssign = dto.UserRoles != null && dto.UserRoles.Any() ? dto.UserRoles : new List<string> { "HRUser" };
+            var validRoles = await _context.Roles.Select(r => r.Name).ToListAsync();
+            var invalidRoles = rolesToAssign.Except(validRoles).ToList();
+
+            if (invalidRoles.Any())
+                throw new ArgumentException($"Invalid roles: {string.Join(", ", invalidRoles)}");
+
+            var newUser = new User
+            {
+                UserName = dto.Username,
+                CompanyId = companyId
+            };
+
+            var result = await _userManager.CreateAsync(newUser, dto.Password);
+            if (!result.Succeeded)
+            {
+                throw new ValidationException($"User creation failed: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+            }
+
+            var addRolesResult = await _userManager.AddToRolesAsync(newUser, rolesToAssign);
+            if (!addRolesResult.Succeeded)
+                throw new ValidationException("Failed to assign roles.");
+
+            return true;
+        }
+
     }
 }

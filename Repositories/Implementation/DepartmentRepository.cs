@@ -7,10 +7,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CVexplorer.Repositories.Implementation
 {
-    public class DepartmentManagementRepository(DataContext _context) : IDepartmentManagementRepository
+    public class DepartmentRepository(DataContext _context) : IDepartmentRepository
     {
         // ✅ Get departments for a user (filters by `UserDepartmentAccess`)
-        public async Task<List<DepartmentManagementDTO>> GetDepartmentsAsync(string companyName, int userId, bool hrLeader)
+        public async Task<List<DepartmentDTO>> GetDepartmentsAsync(string companyName, int userId, bool hrLeader)
         {
             var company = await _context.Companies
                 .Include(c => c.Departments)
@@ -29,7 +29,7 @@ namespace CVexplorer.Repositories.Implementation
                 : company.Departments.Where(d => d.UserDepartmentAccesses.Any(uda => uda.UserId == userId)) // ✅ Regular users see only accessible departments
                 .ToList();
 
-            return accessibleDepartments.Select(d => new DepartmentManagementDTO
+            return accessibleDepartments.Select(d => new DepartmentDTO
             {
                 Name = d.Name,
                 CompanyName = company.Name,
@@ -38,7 +38,7 @@ namespace CVexplorer.Repositories.Implementation
         }
 
         // ✅ Get a specific department within a company
-        public async Task<DepartmentManagementDTO?> GetDepartmentAsync(string companyName, string departmentName)
+        public async Task<DepartmentDTO?> GetDepartmentAsync(string companyName, string departmentName)
         {
             var department = await _context.Departments
                 .Include(d => d.Company)
@@ -47,7 +47,7 @@ namespace CVexplorer.Repositories.Implementation
 
             if (department == null) throw new NotFoundException("Department not found!");
 
-            return new DepartmentManagementDTO
+            return new DepartmentDTO
             {
                 Name = department.Name,
                 CompanyName = department.Company.Name,
@@ -56,7 +56,7 @@ namespace CVexplorer.Repositories.Implementation
         }
 
         // ✅ Create a department within a company
-        public async Task<DepartmentManagementDTO?> CreateDepartmentAsync(string companyName, string departmentName)
+        public async Task<DepartmentDTO?> CreateDepartmentAsync(string companyName, string departmentName)
         {
             var company = await _context.Companies
                 .Include(c => c.Departments)
@@ -75,7 +75,7 @@ namespace CVexplorer.Repositories.Implementation
             await _context.Departments.AddAsync(department);
             await _context.SaveChangesAsync();
 
-            return new DepartmentManagementDTO
+            return new DepartmentDTO
             {
                 Name = department.Name,
                 CompanyName = department.Company.Name
@@ -84,7 +84,7 @@ namespace CVexplorer.Repositories.Implementation
         }
 
         // ✅ Update a department within a company
-        public async Task<DepartmentManagementDTO?> UpdateDepartmentAsync(string companyName, string departmentName, DepartmentManagementDTO dto)
+        public async Task<DepartmentDTO?> UpdateDepartmentAsync(string companyName, string departmentName, DepartmentDTO dto)
         {
             var department = await _context.Departments
                 .Include(d => d.Company)
@@ -102,7 +102,7 @@ namespace CVexplorer.Repositories.Implementation
             _context.Departments.Update(department);
             await _context.SaveChangesAsync();
 
-            return new DepartmentManagementDTO
+            return new DepartmentDTO
             {
                 Name = department.Name,
                 CompanyName = department.Company.Name,

@@ -9,6 +9,8 @@ namespace CVexplorer.Repositories.Interface
 
         Task<UserDTO> UpdateUserAsync(int userId, UserDTO dto);
 
+        Task<bool> EnrollUserAsync(int companyId, UserEnrollDTO dto);
+
         Task<bool> DeleteUserAsync(int userId);
     }
 }

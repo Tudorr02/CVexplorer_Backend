@@ -9,11 +9,13 @@ using System.Security.Claims;
 
 namespace CVexplorer.Controllers
 {
-    public class DepartmentController(IDepartmentManagementRepository _departmentManagement , UserManager<User> _userManager) : Controller
+    [ApiController]
+    [Route("api/[controller]")]
+    public class DepartmentController(IDepartmentRepository _departmentManagement , UserManager<User> _userManager) : Controller
     {
 
-        [HttpGet("{companyName}/departments")]
-        public async Task<ActionResult<List<DepartmentManagementDTO>>> GetDepartments(string companyName)
+        [HttpGet]
+        public async Task<ActionResult<List<DepartmentDTO>>> GetDepartments(string companyName)
         {
             try
             {
@@ -52,7 +54,7 @@ namespace CVexplorer.Controllers
         }
 
         [HttpGet("{companyName}/departments/{departmentName}")]
-        public async Task<ActionResult<DepartmentManagementDTO>> GetDepartment(string companyName, string departmentName)
+        public async Task<ActionResult<DepartmentDTO>> GetDepartment(string companyName, string departmentName)
         {
             try
             {
@@ -91,7 +93,7 @@ namespace CVexplorer.Controllers
         }
 
         [HttpPost("{companyName}/departments")]
-        public async Task<ActionResult<DepartmentManagementDTO>> CreateDepartment(string companyName, string departmentName)
+        public async Task<ActionResult<DepartmentDTO>> CreateDepartment(string companyName, string departmentName)
         {
             if (departmentName == null || string.IsNullOrWhiteSpace(departmentName))
                 return BadRequest(new { message = "Department name is required." });
@@ -123,7 +125,7 @@ namespace CVexplorer.Controllers
         }
 
         [HttpPut("{companyName}/departments/{departmentName}")]
-        public async Task<ActionResult<DepartmentManagementDTO>> UpdateDepartment(string companyName, string departmentName, [FromBody] DepartmentManagementDTO dto)
+        public async Task<ActionResult<DepartmentDTO>> UpdateDepartment(string companyName, string departmentName, [FromBody] DepartmentDTO dto)
         {
             try
             {

@@ -177,7 +177,7 @@ namespace CVexplorer.Repositories.Implementation.Admin
 
         public async Task<AccountDTO> EnrollUserAsync(UserEnrollDTO dto)
         {
-            if (await UserExists(dto.Username))
+            if (await UserExists(dto.Username.ToLower()))
                 throw new ArgumentException("Username is taken");
 
             // ✅ Validate company before creating user
@@ -201,7 +201,7 @@ namespace CVexplorer.Repositories.Implementation.Admin
 
             // ✅ Create the user only after validations pass
             var user = _mapper.Map<User>(dto);
-            user.UserName = dto.Username.ToLower();
+            user.UserName = dto.Username;
             user.CompanyId = companyId; // ✅ Assign validated company
 
             var result = await _userManager.CreateAsync(user, dto.Password);

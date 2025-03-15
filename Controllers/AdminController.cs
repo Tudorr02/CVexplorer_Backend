@@ -17,7 +17,7 @@ namespace CVexplorer.Controllers
     [Authorize(Policy = "RequireModeratorRole")]
     [ApiController]
     [Route("api/[controller]")]
-    public class AdminController(DataContext _context,UserManager<User> _userManager, IDepartmentManagementRepository _departmentManagement ,ICompanyManagementRepository _companyManagement ,IUserManagementRepository _userManagement , IMapper _mapper , ITokenService _tokenService) : Controller
+    public class AdminController(DataContext _context,UserManager<User> _userManager, IDepartmentRepository _departmentManagement ,ICompanyManagementRepository _companyManagement ,IUserManagementRepository _userManagement , IMapper _mapper , ITokenService _tokenService) : Controller
     {
         [HttpGet("Users")]
         public async Task<ActionResult<List<UserManagementListDTO>>> GetUsers()
