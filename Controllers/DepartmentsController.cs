@@ -36,6 +36,7 @@ namespace CVexplorer.Controllers
             return Ok(departments);
         }
 
+        [Authorize(Policy = "RequireHRLeaderRole")]
         [HttpGet]
         public async Task<ActionResult<List<DepartmentListDTO>>> GetDepartments()
         {
@@ -67,44 +68,6 @@ namespace CVexplorer.Controllers
             }
         }
 
-        //[HttpGet("{companyName}/departments/{departmentName}")]
-        //public async Task<ActionResult<DepartmentDTO>> GetDepartment(string companyName, string departmentName)
-        //{
-        //    try
-        //    {
-        //        if(departmentName == null || string.IsNullOrWhiteSpace(departmentName))
-        //            return BadRequest(new { message = "Department name is required." });
-
-        //        if(companyName == null || string.IsNullOrWhiteSpace(companyName))
-        //            return BadRequest(new { message = "Company name is required." });
-
-        //        // ✅ Extract User ID from JWT Token
-        //        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        //        if (string.IsNullOrEmpty(userIdClaim)) return Unauthorized("Invalid token!");
-
-        //        int userId = int.Parse(userIdClaim);
-
-        //        // ✅ Retrieve the user entity from the database
-        //        var user = await _userManager.Users
-        //            .Include(u => u.Company) // Ensure Company is loaded
-        //            .FirstOrDefaultAsync(u => u.Id == userId);
-
-        //        if (user == null) return Unauthorized("User not found!");
-
-        //        // ✅ Check if the user belongs to the same company
-        //        if (user.Company == null || !user.Company.Name.Equals(companyName, StringComparison.OrdinalIgnoreCase))
-        //        {
-        //            return Forbid("You are not authorized to access this company's departments.");
-        //        }
-
-        //        var department = await _departmentManagement.GetDepartmentAsync(companyName, departmentName);
-        //        return Ok(department);
-        //    }
-        //    catch (NotFoundException ex)
-        //    {
-        //        return NotFound(new { message = ex.Message });
-        //    }
-        //}
 
         [Authorize(Policy = "RequireHRLeaderRole")]
         [HttpPost]
@@ -121,6 +84,16 @@ namespace CVexplorer.Controllers
             if (user.CompanyId == null)
             {
                 return StatusCode(StatusCodes.Status403Forbidden, new { message = "You are not assigned to a company." });
+            }
+
+
+            // ✅ Check if department already exists in the company
+            bool departmentExists = await _context.Departments
+                .AnyAsync(d => d.CompanyId == user.CompanyId && d.Name == departmentName);
+
+            if (departmentExists)
+            {
+                return Conflict(new { message = "A department with this name already exists in your company." });
             }
 
             var createdDepartment = await _departmentManagement.CreateDepartmentAsync((int)user.CompanyId, departmentName);

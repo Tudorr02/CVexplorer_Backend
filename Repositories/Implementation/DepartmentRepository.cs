@@ -44,6 +44,8 @@ namespace CVexplorer.Repositories.Implementation
 
             if (company == null) throw new NotFoundException("Company not found!");
 
+
+
             var department = new Department
             {
                 Name = departmentName,
