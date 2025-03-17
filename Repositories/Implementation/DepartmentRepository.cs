@@ -10,57 +10,37 @@ namespace CVexplorer.Repositories.Implementation
     public class DepartmentRepository(DataContext _context) : IDepartmentRepository
     {
         // ✅ Get departments for a user (filters by `UserDepartmentAccess`)
-        public async Task<List<DepartmentDTO>> GetDepartmentsAsync(string companyName, int userId, bool hrLeader)
+        public async Task<List<DepartmentListDTO>> GetDepartmentsAsync(int companyId,int userId,bool isHrLeader = false)
         {
             var company = await _context.Companies
                 .Include(c => c.Departments)
                 .ThenInclude(d => d.UserDepartmentAccesses) // ✅ Include access control
-                .Include(c => c.Departments)
-                .ThenInclude(d => d.Positions) // ✅ Include positions
-                .FirstOrDefaultAsync(c => c.Name == companyName);
+                .FirstOrDefaultAsync(c => c.Id == companyId);
 
             if (company == null) throw new NotFoundException("Company not found!");
 
 
 
             // ✅ If NOT HR Leader, filter by `UserDepartmentAccess`
-            var accessibleDepartments = hrLeader
+            var accessibleDepartments = isHrLeader
                 ? company.Departments // ✅ HR Leaders see ALL departments
                 : company.Departments.Where(d => d.UserDepartmentAccesses.Any(uda => uda.UserId == userId)) // ✅ Regular users see only accessible departments
                 .ToList();
 
-            return accessibleDepartments.Select(d => new DepartmentDTO
+            return accessibleDepartments.Select(d => new DepartmentListDTO
             {
-                Name = d.Name,
-                CompanyName = company.Name,
-                Positions = d.Positions.Select(p => p.Name).ToList()
+                Id = d.Id,
+                Name = d.Name
             }).ToList();
         }
 
-        // ✅ Get a specific department within a company
-        public async Task<DepartmentDTO?> GetDepartmentAsync(string companyName, string departmentName)
-        {
-            var department = await _context.Departments
-                .Include(d => d.Company)
-                .Include(d => d.Positions) // ✅ Include positions
-                .FirstOrDefaultAsync(d => d.Name == departmentName && d.Company.Name == companyName);
-
-            if (department == null) throw new NotFoundException("Department not found!");
-
-            return new DepartmentDTO
-            {
-                Name = department.Name,
-                CompanyName = department.Company.Name,
-                Positions = department.Positions.Select(p => p.Name).ToList()
-            };
-        }
-
+      
         // ✅ Create a department within a company
-        public async Task<DepartmentDTO?> CreateDepartmentAsync(string companyName, string departmentName)
+        public async Task<DepartmentListDTO> CreateDepartmentAsync(int companyId, string departmentName)
         {
             var company = await _context.Companies
                 .Include(c => c.Departments)
-                .FirstOrDefaultAsync(c => c.Name == companyName);
+                .FirstOrDefaultAsync(c => c.Id == companyId);
 
             if (company == null) throw new NotFoundException("Company not found!");
 
@@ -75,21 +55,20 @@ namespace CVexplorer.Repositories.Implementation
             await _context.Departments.AddAsync(department);
             await _context.SaveChangesAsync();
 
-            return new DepartmentDTO
+            return new DepartmentListDTO
             {
-                Name = department.Name,
-                CompanyName = department.Company.Name
-                
+                Id = department.Id,
+                Name = department.Name
             };
         }
 
         // ✅ Update a department within a company
-        public async Task<DepartmentDTO?> UpdateDepartmentAsync(string companyName, string departmentName, DepartmentDTO dto)
+        public async Task<DepartmentDTO?> UpdateDepartmentAsync(int departmentID, DepartmentDTO dto)
         {
             var department = await _context.Departments
                 .Include(d => d.Company)
                 .Include(d => d.Positions)
-                .FirstOrDefaultAsync(d => d.Name == departmentName && d.Company.Name == companyName);
+                .FirstOrDefaultAsync(d => d.Id == departmentID);
 
             if (department == null) throw new NotFoundException("Department not found!");
 
@@ -105,23 +84,54 @@ namespace CVexplorer.Repositories.Implementation
             return new DepartmentDTO
             {
                 Name = department.Name,
-                CompanyName = department.Company.Name,
+                
                 //Positions = department.Positions.Select(p => p.Name).ToList()
             };
         }
 
         // ✅ Delete a department within a company
-        public async Task<bool> DeleteDepartmentAsync(string companyName, string departmentName)
+        public async Task<bool> DeleteDepartmentAsync(int departmentId)
         {
             var department = await _context.Departments
                 .Include(d => d.Company)
-                .FirstOrDefaultAsync(d => d.Name == departmentName && d.Company.Name == companyName);
+                .FirstOrDefaultAsync(d => d.Id == departmentId);
 
             if (department == null) throw new NotFoundException("Department not found!");
 
             _context.Departments.Remove(department);
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<List<DepartmentTreeNodeDTO>> GetDepartmentsTreeAsync(int companyId, int userId, bool isHrLeader = false)
+        {
+            var company = await _context.Companies
+                 .Include(c => c.Departments)
+                 .ThenInclude(d => d.UserDepartmentAccesses) // ✅ Include access control
+                 .Include(c => c.Departments)
+                 .ThenInclude(d => d.Positions)
+                 .FirstOrDefaultAsync(c => c.Id == companyId);
+
+            if (company == null) throw new NotFoundException("Company not found!");
+
+
+
+            // ✅ If NOT HR Leader, filter by `UserDepartmentAccess`
+            var accessibleDepartments = isHrLeader
+                ? company.Departments // ✅ HR Leaders see ALL departments
+                : company.Departments.Where(d => d.UserDepartmentAccesses.Any(uda => uda.UserId == userId)) // ✅ Regular users see only accessible departments
+                .ToList();
+
+            return accessibleDepartments.Select(d => new DepartmentTreeNodeDTO
+            {
+                Id = d.Id,
+                Name = d.Name,
+                Positions = d.Positions.Select(p => new PositionTreeNodeDTO
+                {
+                    Id = p.Id,
+                    Name = p.Name
+                }).ToList()
+            }).ToList();
         }
     }
 }
