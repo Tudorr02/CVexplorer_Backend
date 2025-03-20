@@ -18,12 +18,12 @@ namespace CVexplorer.Controllers
     [Authorize(Policy = "RequireAllRoles")]
     [ApiController]
     [Route("api/[controller]")]
-    public class UsersController(IUserDetailsRepository _userDetails, UserManager<User> _userManager , ICompanyUserRepository _companyUser, DataContext _context) : Controller
+    public class UsersController(IUserDetailsRepository _userDetails, UserManager<User> _userManager , ICompanyUsersRepository _companyUser, DataContext _context) : Controller
     {
 
         [Authorize(Policy = "RequireHRLeaderRole")]
         [HttpGet()]
-        public async Task<ActionResult<List<CompanyUserDTO>>> GetCompanyUsers()
+        public async Task<ActionResult<List<CompanyUsersDTO>>> GetUsers()
         {
             try
             {
@@ -44,7 +44,7 @@ namespace CVexplorer.Controllers
                     return Forbid();
                 }
 
-                var users = await _companyUser.GetUsersByCompanyAsync(hrLeader.Company.Name);
+                var users = await _companyUser.GetCompanyUsers(hrLeader.Company.Name);
                 return Ok(users);
             }
             catch (NotFoundException ex)

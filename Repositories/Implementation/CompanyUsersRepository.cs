@@ -8,9 +8,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CVexplorer.Repositories.Implementation
 {
-    public class CompanyUserRepository(DataContext _context, UserManager<User> _userManager) : ICompanyUserRepository
+    public class CompanyUsersRepository(DataContext _context, UserManager<User> _userManager) : ICompanyUsersRepository
     {
-        public async Task<List<CompanyUserDTO>> GetUsersByCompanyAsync(string companyName)
+        public async Task<List<CompanyUsersDTO>> GetCompanyUsers(string companyName)
         {
             // Check if the company exists
             var company = await _context.Companies
@@ -27,11 +27,11 @@ namespace CVexplorer.Repositories.Implementation
                 .ToListAsync();
 
             // Convert to DTO
-            var userDtos = new List<CompanyUserDTO>();
+            var userDtos = new List<CompanyUsersDTO>();
             foreach (var user in users)
             {
                 var roles = await _userManager.GetRolesAsync(user); // Get user roles
-                userDtos.Add(new CompanyUserDTO
+                userDtos.Add(new CompanyUsersDTO
                 {
                     Username = user.UserName,
                     FirstName = user.FirstName,

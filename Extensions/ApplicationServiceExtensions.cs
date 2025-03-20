@@ -14,7 +14,7 @@ namespace CVexplorer.Extensions
             services.AddControllers();
             services.AddDbContext<DataContext>(opt =>
             {
-                opt.UseSqlServer(configuration.GetConnectionString("LocalConnectionPC"));
+                opt.UseSqlServer(configuration.GetConnectionString("LocalConnection"));
             });
             services.AddCors();
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
@@ -23,7 +23,7 @@ namespace CVexplorer.Extensions
             services.AddScoped<IUserManagementRepository, UserManagementRepository>();
             services.AddScoped<ICompanyManagementRepository, CompanyManagementRepository>();
             services.AddScoped<IDepartmentManagementRepository,DepartmentManagementRepository>();
-            services.AddScoped<ICompanyUserRepository, CompanyUserRepository>();
+            services.AddScoped<ICompanyUsersRepository, CompanyUsersRepository>();
         
             
 

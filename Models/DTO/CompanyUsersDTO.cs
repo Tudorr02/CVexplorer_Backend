@@ -1,6 +1,6 @@
 ﻿namespace CVexplorer.Models.DTO
 {
-    public class CompanyUserDTO
+    public class CompanyUsersDTO
     {
         public string Username { get; set; }
         public string? FirstName { get; set; }

@@ -3,8 +3,8 @@ using CVexplorer.Models.DTO.Admin;
 
 namespace CVexplorer.Repositories.Interface
 {
-    public interface ICompanyUserRepository
+    public interface ICompanyUsersRepository
     {
-        Task<List<CompanyUserDTO>> GetUsersByCompanyAsync(string companyName);
+        Task<List<CompanyUsersDTO>> GetCompanyUsers(string companyName);
     }
 }
