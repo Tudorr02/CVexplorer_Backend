@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace CVexplorer.Models.DTO.Admin
+namespace CVexplorer.Models.DTO
 {
-    public class UserEnrollmentDTO
+    public class UserEnrollDTO
     {
         [MaxLength(60)]
         public required string Username { get; set; }

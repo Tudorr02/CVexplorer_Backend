@@ -39,6 +39,24 @@ namespace CVexplorer.Data
                 .HasForeignKey(ur => ur.RoleId)
                 .IsRequired();
 
+            // ✅ Department - UserDepartmentAccess Relationship (Cascade Delete)
+            modelBuilder.Entity<UserDepartmentAccess>()
+                .HasOne(uda => uda.Department)
+                .WithMany(d => d.UserDepartmentAccesses)
+                .HasForeignKey(uda => uda.DepartmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Position>()
+                .HasOne(p => p.Department)
+                .WithMany(d => d.Positions)
+                .HasForeignKey(p => p.DepartmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Department>()
+                .HasOne(d => d.Company)
+                .WithMany(c => c.Departments)
+                .HasForeignKey(d => d.CompanyId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             //modelBuilder.Entity<Department>()
             //     .HasOne(d => d.Company)

@@ -3,7 +3,6 @@ using CVexplorer.Data;
 using CVexplorer.Exceptions;
 using CVexplorer.Models.Domain;
 using CVexplorer.Models.DTO;
-using CVexplorer.Models.DTO.Admin;
 using CVexplorer.Repositories.Interface;
 using CVexplorer.Repositories.Interface.Admin;
 using Microsoft.AspNetCore.Identity;
@@ -14,7 +13,7 @@ namespace CVexplorer.Repositories.Implementation.Admin
 {
     public class UserManagementRepository (UserManager<User> _userManager , DataContext _context , IMapper _mapper , ITokenService _tokenService) : IUserManagementRepository
     {
-        public async Task<List<UserManagementDTO>> GetUsersAsync()
+        public async Task<List<UserManagementListDTO>> GetUsersAsync()
         {
             //var user = await _userManager.Users
             //    .Include(u => u.Company) // ✅ Ensure the company is loaded
@@ -24,8 +23,9 @@ namespace CVexplorer.Repositories.Implementation.Admin
                                         .Include(u => u.Company)
                                         .ToListAsync();
 
-            return users.Select(u => new UserManagementDTO
+            return users.Select(u => new UserManagementListDTO
             {
+                Id = u.Id,
                 Username = u.UserName,
                 FirstName = u.FirstName,
                 LastName = u.LastName,
@@ -35,11 +35,12 @@ namespace CVexplorer.Repositories.Implementation.Admin
             }).ToList();
         }
 
-        public async Task<UserManagementDTO> UpdateUserAsync (string username,UserManagementDTO dto)
+        public async Task<UserManagementDTO> UpdateUserAsync (int userId,UserManagementDTO dto)
         {
             var user = await _userManager.Users
                             .Include(u => u.UserRoles)
-                            .FirstOrDefaultAsync(u => u.UserName == username);
+                            .Include(u => u.Company)
+                            .FirstOrDefaultAsync(u => u.Id == userId);
 
 
             if (user == null)
@@ -86,7 +87,7 @@ namespace CVexplorer.Repositories.Implementation.Admin
             }
 
             // ✅ Update User Roles (if provided)
-            if (dto.UserRoles.Count != user.UserRoles.Count)
+            if (dto.UserRoles != null)
             {
                 var currentRoles = await _userManager.GetRolesAsync(user);
                 var rolesToRemove = currentRoles.Except(dto.UserRoles).ToList();
@@ -147,33 +148,9 @@ namespace CVexplorer.Repositories.Implementation.Admin
             };
         }
 
-        public async Task<UserManagementDTO> GetUserAsync(string username)
+        public async Task<UserManagementDTO> DeleteUserAsync(int userId)
         {
-            //var user = await _userManager.Users
-            //    .Include(u => u.Company) // ✅ Ensure the company is loaded
-            //    .FirstOrDefaultAsync(u => u.UserName == username);
-
-            var user = await _userManager.FindByNameAsync(username);
-
-            if (user == null)
-            {
-                throw new NotFoundException("User not found !");
-            }
-
-            return new UserManagementDTO
-            {
-                Username = user.UserName,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
-                CompanyName = user.Company?.Name, // ✅ Avoids null reference if no company
-                UserRoles = _userManager.GetRolesAsync(user).Result.ToList() // ✅ Fetch user roles
-            };
-        }
-
-        public async Task<UserManagementDTO> DeleteUserAsync(string username)
-        {
-            var user = await _userManager.FindByNameAsync(username);
+            var user = await _userManager.FindByIdAsync(userId.ToString());
 
             if (user == null)
             {
@@ -198,9 +175,9 @@ namespace CVexplorer.Repositories.Implementation.Admin
             };
         }
 
-        public async Task<AccountDTO> EnrollUserAsync(UserEnrollmentDTO dto)
+        public async Task<AccountDTO> EnrollUserAsync(UserEnrollDTO dto)
         {
-            if (await UserExists(dto.Username))
+            if (await UserExists(dto.Username.ToLower()))
                 throw new ArgumentException("Username is taken");
 
             // ✅ Validate company before creating user
@@ -224,7 +201,7 @@ namespace CVexplorer.Repositories.Implementation.Admin
 
             // ✅ Create the user only after validations pass
             var user = _mapper.Map<User>(dto);
-            user.UserName = dto.Username.ToLower();
+            user.UserName = dto.Username;
             user.CompanyId = companyId; // ✅ Assign validated company
 
             var result = await _userManager.CreateAsync(user, dto.Password);

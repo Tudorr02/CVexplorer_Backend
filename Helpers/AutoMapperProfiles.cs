@@ -1,7 +1,6 @@
 ﻿using AutoMapper;
 using CVexplorer.Models.Domain;
 using CVexplorer.Models.DTO;
-using CVexplorer.Models.DTO.Admin;
 
 namespace CVexplorer.Helpers
 {
@@ -10,7 +9,7 @@ namespace CVexplorer.Helpers
         public AutoMapperProfiles()
         {
             CreateMap<User, AccountDTO>();
-            CreateMap<UserEnrollmentDTO, User>()
+            CreateMap<UserEnrollDTO, User>()
                 .ForMember(dest => dest.UserRoles, opt => opt.Ignore())// ❌ Ignore roles, handled separately
                 .ForMember(dest => dest.CompanyId, opt => opt.Ignore()) // ❌ Ignore CompanyId, set it in repository
                 .ForMember(dest => dest.Company, opt => opt.Ignore());  // ❌ Ignore Company object, set it in repository

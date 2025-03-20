@@ -1,0 +1,200 @@
+﻿using CVexplorer.Data;
+using CVexplorer.Exceptions;
+using CVexplorer.Models.Domain;
+using CVexplorer.Models.DTO;
+using CVexplorer.Repositories.Interface;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
+
+namespace CVexplorer.Repositories.Implementation
+{
+    public class UserRepository(DataContext _context, UserManager<User> _userManager) : IUserRepository
+    {
+        public async Task<List<UserListDTO>> GetUsersAsync(int companyId)
+        {
+            
+            var users = await _context.Users
+                .Where(u => u.CompanyId == companyId) 
+                .ToListAsync();
+
+            return users  // ✅ Use `companyId` instead of `companyName`
+               .Select(u => new UserListDTO
+               {
+                   Id = u.Id,
+                   Username = u.UserName,
+                   FirstName = u.FirstName,
+                   LastName = u.LastName,
+                   Email = u.Email,
+                   UserRoles = _userManager.GetRolesAsync(u).Result.ToList()
+               })
+                .ToList();
+        }
+
+        public async Task<UserDTO> UpdateUserAsync(int userId, UserDTO dto)
+        {
+            var user = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null)
+            {
+                throw new NotFoundException("User not found");
+            }
+
+            bool hasChanges = false; // ✅ Track if any update was made
+
+            // ✅ Update FirstName
+            if (!string.IsNullOrWhiteSpace(dto.FirstName) && !dto.FirstName.Equals(user.FirstName))
+            {
+                user.FirstName = dto.FirstName;
+                hasChanges = true;
+            }
+
+            // ✅ Update LastName
+            if (!string.IsNullOrWhiteSpace(dto.LastName) && !dto.LastName.Equals(user.LastName))
+            {
+                user.LastName = dto.LastName;
+                hasChanges = true;
+            }
+
+            // ✅ Update Email
+            if (!string.IsNullOrWhiteSpace(dto.Email) && !dto.Email.Equals(user.Email))
+            {
+                user.Email = dto.Email;
+                hasChanges = true;
+            }
+
+            // ✅ Update User Roles (if provided)
+            if (dto.UserRoles != null)
+            {
+                var currentRoles = await _userManager.GetRolesAsync(user);
+                var rolesToRemove = currentRoles.Except(dto.UserRoles).ToList();
+                var rolesToAdd = dto.UserRoles.Except(currentRoles).ToList();
+
+                // ✅ Validate roles exist before updating
+                var validRoles = await _context.Roles.Select(r => r.Name).ToListAsync();
+                var invalidRoles = rolesToAdd.Except(validRoles).ToList();
+
+                // ✅ Define restricted roles that the HR Leader cannot assign
+                var restrictedRoles = new List<string> { "Admin", "Moderator" };
+
+
+                if (invalidRoles.Any())
+                {
+                    throw new Exception($"Invalid roles: {string.Join(", ", invalidRoles)}");
+                }
+
+                // ✅ Check if HR Leader is trying to assign restricted roles
+                var attemptedRestrictedRoles = rolesToAdd.Intersect(restrictedRoles).ToList();
+                if (attemptedRestrictedRoles.Any())
+                {
+                    throw new UnauthorizedAccessException($"You are not allowed to assign these roles: {string.Join(", ", attemptedRestrictedRoles)}");
+                }
+
+                // ✅ Remove roles if necessary
+                if (rolesToRemove.Any())
+                {
+                    var removeResult = await _userManager.RemoveFromRolesAsync(user, rolesToRemove);
+                    if (!removeResult.Succeeded)
+                    {
+                        throw new Exception("Failed to remove existing roles.");
+                    }
+                    hasChanges = true; // ✅ Track role removal as a change
+
+                }
+
+                // ✅ Add new roles
+                if (rolesToAdd.Any())
+                {
+                    var addResult = await _userManager.AddToRolesAsync(user, rolesToAdd);
+                    if (!addResult.Succeeded)
+                    {
+                        throw new Exception("Failed to assign new roles.");
+                    }
+                    hasChanges = true; // ✅ Track role addition as a change
+
+                }
+            }
+
+            if (hasChanges)
+            {
+                var updateResult = await _userManager.UpdateAsync(user);
+                if (!updateResult.Succeeded)
+                {
+                    throw new Exception("Failed to update user.");
+                }
+            }
+
+            return new UserDTO
+            {
+                
+                Username = user.UserName,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                UserRoles = _userManager.GetRolesAsync(user).Result.ToList()
+            };
+        }
+
+        public async Task<bool> DeleteUserAsync(int userId)
+        {
+            var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null)
+            {
+                throw new NotFoundException("User not found.");
+            }
+
+            // ✅ Prevent deletion of Admins or Moderators
+            var userRoles = await _userManager.GetRolesAsync(user);
+            if (userRoles.Contains("Admin") || userRoles.Contains("Moderator"))
+            {
+                throw new UnauthorizedAccessException("You are not allowed to delete Admin or Moderator users.");
+            }
+
+            var result = await _userManager.DeleteAsync(user);
+
+            if (!result.Succeeded)
+            {
+                throw new Exception("Failed to delete user.");
+            }
+
+            return true;
+        }
+
+        public async Task<bool> EnrollUserAsync(int companyId, UserEnrollDTO dto)
+        {
+            if (await _userManager.FindByNameAsync(dto.Username.ToLower()) != null)
+            {
+                throw new ValidationException("Username is already taken.");
+            }
+
+            // ✅ Validate roles before creating user
+            var rolesToAssign = dto.UserRoles != null && dto.UserRoles.Any() ? dto.UserRoles : new List<string> { "HRUser" };
+            var validRoles = await _context.Roles.Select(r => r.Name).ToListAsync();
+            var invalidRoles = rolesToAssign.Except(validRoles).ToList();
+
+            if (invalidRoles.Any())
+                throw new ArgumentException($"Invalid roles: {string.Join(", ", invalidRoles)}");
+
+            var newUser = new User
+            {
+                UserName = dto.Username,
+                CompanyId = companyId
+            };
+
+            var result = await _userManager.CreateAsync(newUser, dto.Password);
+            if (!result.Succeeded)
+            {
+                throw new ValidationException($"User creation failed: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+            }
+
+            var addRolesResult = await _userManager.AddToRolesAsync(newUser, rolesToAssign);
+            if (!addRolesResult.Succeeded)
+                throw new ValidationException("Failed to assign roles.");
+
+            return true;
+        }
+
+    }
+}
