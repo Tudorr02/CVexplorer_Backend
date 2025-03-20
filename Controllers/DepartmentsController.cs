@@ -2,6 +2,7 @@
 using CVexplorer.Exceptions;
 using CVexplorer.Models.Domain;
 using CVexplorer.Models.DTO;
+using CVexplorer.Repositories.Implementation;
 using CVexplorer.Repositories.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -11,10 +12,10 @@ using System.Security.Claims;
 
 namespace CVexplorer.Controllers
 {
-    [Authorize(Policy= "RequireHRUserRole")]
+    [Authorize(Policy = "RequireHRUserRole")]
     [ApiController]
     [Route("api/[controller]")]
-    public class DepartmentsController(DataContext _context,IDepartmentRepository _departmentManagement , UserManager<User> _userManager) : Controller
+    public class DepartmentsController(DataContext _context, IDepartmentRepository _departmentManagement, UserManager<User> _userManager) : Controller
     {
 
         [HttpGet("DepartmentsTree")]
@@ -42,7 +43,7 @@ namespace CVexplorer.Controllers
         {
             try
             {
-           
+
                 // ✅ Retrieve the user entity from the database
                 var user = await _userManager.GetUserAsync(User);
 
@@ -51,8 +52,8 @@ namespace CVexplorer.Controllers
 
                 if (user.CompanyId == null)
                 {
-                    return StatusCode(StatusCodes.Status403Forbidden,new { message = "You are not assigned to a company." });
-                   
+                    return StatusCode(StatusCodes.Status403Forbidden, new { message = "You are not assigned to a company." });
+
                 }
 
                 var userRoles = await _userManager.GetRolesAsync(user);
@@ -62,53 +63,39 @@ namespace CVexplorer.Controllers
             catch (NotFoundException ex)
             {
                 return NotFound(new { message = ex.Message });
-            }catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 return StatusCode(500, new { message = "An error occurred.", error = ex.Message });
             }
         }
 
 
-        [Authorize(Policy = "RequireHRLeaderRole")]
-        [HttpPost]
-        public async Task<ActionResult<DepartmentListDTO>> CreateDepartment(string departmentName)
+        /** ✅ GET a specific department */
+        [HttpGet("{departmentId}")]
+        public async Task<ActionResult<DepartmentDTO>> GetDepartment(int departmentId)
         {
-            if (departmentName == null || string.IsNullOrWhiteSpace(departmentName))
-                return BadRequest(new { message = "Department name is required." });
-
             var user = await _userManager.GetUserAsync(User);
-
             if (user == null) return Unauthorized("User not found!");
 
-            // ✅ Check if the user belongs to the same company
             if (user.CompanyId == null)
-            {
                 return StatusCode(StatusCodes.Status403Forbidden, new { message = "You are not assigned to a company." });
-            }
 
+            var department = await _departmentManagement.GetDepartmentAsync(departmentId, (int)user.CompanyId);
+            if (department == null) return NotFound(new { message = "Department not found!" });
 
-            // ✅ Check if department already exists in the company
-            bool departmentExists = await _context.Departments
-                .AnyAsync(d => d.CompanyId == user.CompanyId && d.Name == departmentName);
-
-            if (departmentExists)
-            {
-                return Conflict(new { message = "A department with this name already exists in your company." });
-            }
-
-            var createdDepartment = await _departmentManagement.CreateDepartmentAsync((int)user.CompanyId, departmentName);
-            return Ok(createdDepartment);
+            return Ok(department);
         }
 
         [Authorize(Policy = "RequireHRLeaderRole")]
-        [HttpPut("{departmentId}")]
-        public async Task<ActionResult<DepartmentDTO>> UpdateDepartment( int  departmentId, [FromBody] DepartmentDTO dto)
+        [HttpPost]
+        public async Task<ActionResult<DepartmentListDTO>> CreateDepartment([FromBody] DepartmentDTO dto)
         {
             try
             {
-               
+                if (dto == null || string.IsNullOrWhiteSpace(dto.Name))
+                    return BadRequest(new { message = "Incomplete data provided !" });
 
-                // ✅ Retrieve the user entity from the database
                 var user = await _userManager.GetUserAsync(User);
 
                 if (user == null) return Unauthorized("User not found!");
@@ -119,20 +106,72 @@ namespace CVexplorer.Controllers
                     return StatusCode(StatusCodes.Status403Forbidden, new { message = "You are not assigned to a company." });
                 }
 
-                var department = _context.Departments.Include(d => d.Company).FirstOrDefault(d => d.Id == departmentId && d.CompanyId == user.CompanyId);
 
-                if( department == null)
+                // ✅ Check if department already exists in the company
+                bool departmentExists = await _context.Departments
+                    .AnyAsync(d => d.CompanyId == user.CompanyId && d.Name == dto.Name);
+
+                if (departmentExists)
                 {
-                    return StatusCode(StatusCodes.Status403Forbidden, new { message = "This department does exist in your company!" });
-
+                    return Conflict(new { message = "A department with this name already exists in your company." });
                 }
 
-                var updatedDepartment = await _departmentManagement.UpdateDepartmentAsync(departmentId, dto);
-                return Ok(updatedDepartment);
+                var createdDepartment = await _departmentManagement.CreateDepartmentAsync((int)user.CompanyId, dto);
+                return Ok(createdDepartment);
             }
             catch (NotFoundException ex)
             {
                 return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred.", error = ex.Message });
+            }
+
+
+        }
+
+
+
+        [Authorize(Policy = "RequireHRLeaderRole")]
+        [HttpPut("{departmentId}")]
+        public async Task<ActionResult<DepartmentDTO>> UpdateDepartment(int departmentId, [FromBody] DepartmentDTO dto)
+        {
+            try
+            {
+
+                // ✅ Retrieve the user entity from the database
+                var user = await _userManager.GetUserAsync(User);
+
+                if (user == null) return Unauthorized("User not found!");
+
+                // ✅ Check if the user belongs to a company
+                if (user.CompanyId == null)
+                {
+                    return StatusCode(StatusCodes.Status403Forbidden, new { message = "You are not assigned to a company." });
+                }
+
+                // ✅ Call repository method to update the department
+                var updatedDepartment = await _departmentManagement.UpdateDepartmentAsync(departmentId, (int)user.CompanyId, dto);
+
+                if (updatedDepartment == null)
+                {
+                    return NotFound(new { message = "Department not found or you do not have access." });
+                }
+
+                return Ok(updatedDepartment);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "An error occurred.", error = ex.Message });
             }
         }
 
@@ -167,6 +206,28 @@ namespace CVexplorer.Controllers
 
                 return Ok(new { message = "Department deleted successfully." });
             }
+            catch (NotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+        }
+
+        [Authorize(Policy = "RequireHRLeaderRole")]
+        [HttpGet("DepartmentAccessTemplate")]
+        public async Task<ActionResult<List<DepartmentAccessDTO>>> GetDepartmentAccess()
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+                if (user == null) return Unauthorized("User not found!");
+
+                if (user.CompanyId == null)
+                    return StatusCode(403, new { message = "You are not assigned to a company." });
+
+                var departmentUsers = await _departmentManagement.GetDepartmentAccessAsync((int)user.CompanyId);
+                return Ok(departmentUsers);
+            }
+
             catch (NotFoundException ex)
             {
                 return NotFound(new { message = ex.Message });
