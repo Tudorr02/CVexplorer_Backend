@@ -16,6 +16,8 @@ namespace CVexplorer.Repositories.Implementation
             
             var users = await _context.Users
                 .Where(u => u.CompanyId == companyId) 
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
                 .ToListAsync();
 
             return users  // ✅ Use `companyId` instead of `companyName`
@@ -26,15 +28,18 @@ namespace CVexplorer.Repositories.Implementation
                    FirstName = u.FirstName,
                    LastName = u.LastName,
                    Email = u.Email,
-                   UserRoles = _userManager.GetRolesAsync(u).Result.ToList()
+                   UserRole = u.UserRoles.FirstOrDefault().Role?.Name
                })
                 .ToList();
         }
 
         public async Task<UserDTO> UpdateUserAsync(int userId, UserDTO dto)
         {
-            var user = await _userManager.Users
+            var user = await _context.Users
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
                 .FirstOrDefaultAsync(u => u.Id == userId);
+
 
             if (user == null)
             {
@@ -64,58 +69,37 @@ namespace CVexplorer.Repositories.Implementation
                 hasChanges = true;
             }
 
-            // ✅ Update User Roles (if provided)
-            if (dto.UserRoles != null)
+            if (!string.IsNullOrWhiteSpace(dto.UserRole))
             {
-                var currentRoles = await _userManager.GetRolesAsync(user);
-                var rolesToRemove = currentRoles.Except(dto.UserRoles).ToList();
-                var rolesToAdd = dto.UserRoles.Except(currentRoles).ToList();
+                var currentRole = user.UserRoles.FirstOrDefault()?.Role?.Name;
 
-                // ✅ Validate roles exist before updating
-                var validRoles = await _context.Roles.Select(r => r.Name).ToListAsync();
-                var invalidRoles = rolesToAdd.Except(validRoles).ToList();
-
-                // ✅ Define restricted roles that the HR Leader cannot assign
-                var restrictedRoles = new List<string> { "Admin", "Moderator" };
-
-
-                if (invalidRoles.Any())
+                if (currentRole != null)
                 {
-                    throw new Exception($"Invalid roles: {string.Join(", ", invalidRoles)}");
-                }
-
-                // ✅ Check if HR Leader is trying to assign restricted roles
-                var attemptedRestrictedRoles = rolesToAdd.Intersect(restrictedRoles).ToList();
-                if (attemptedRestrictedRoles.Any())
-                {
-                    throw new UnauthorizedAccessException($"You are not allowed to assign these roles: {string.Join(", ", attemptedRestrictedRoles)}");
-                }
-
-                // ✅ Remove roles if necessary
-                if (rolesToRemove.Any())
-                {
-                    var removeResult = await _userManager.RemoveFromRolesAsync(user, rolesToRemove);
-                    if (!removeResult.Succeeded)
+                    if (!currentRole.ToLower().Equals(dto.UserRole.ToLower()))
                     {
-                        throw new Exception("Failed to remove existing roles.");
+                        user.UserRoles.Clear();
+
+                        // ✅ Validate the new role exists
+                        var validRoles = new List<string> { "HRLeader", "HRUser" };
+                        if (!validRoles.Contains(dto.UserRole))
+                        {
+                            throw new Exception($"Invalid role: {dto.UserRole}");
+                        }
+
+                        var addResult = await _userManager.AddToRoleAsync(user, dto.UserRole);
+                        if (!addResult.Succeeded)
+                        {
+                            throw new Exception("Failed to assign new role.");
+                        }
+                        hasChanges = true;
+
                     }
-                    hasChanges = true; // ✅ Track role removal as a change
 
                 }
 
-                // ✅ Add new roles
-                if (rolesToAdd.Any())
-                {
-                    var addResult = await _userManager.AddToRolesAsync(user, rolesToAdd);
-                    if (!addResult.Succeeded)
-                    {
-                        throw new Exception("Failed to assign new roles.");
-                    }
-                    hasChanges = true; // ✅ Track role addition as a change
-
-                }
             }
 
+            
             if (hasChanges)
             {
                 var updateResult = await _userManager.UpdateAsync(user);
@@ -132,13 +116,16 @@ namespace CVexplorer.Repositories.Implementation
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
-                UserRoles = _userManager.GetRolesAsync(user).Result.ToList()
+                UserRole = user.UserRoles.FirstOrDefault().Role?.Name,
             };
         }
 
         public async Task<bool> DeleteUserAsync(int userId)
         {
-            var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            var user = await _context.Users
+                           .Include(u => u.UserRoles)
+                           .ThenInclude(ur => ur.Role)
+                           .FirstOrDefaultAsync(u => u.Id == userId);
 
             if (user == null)
             {
@@ -146,11 +133,11 @@ namespace CVexplorer.Repositories.Implementation
             }
 
             // ✅ Prevent deletion of Admins or Moderators
-            var userRoles = await _userManager.GetRolesAsync(user);
-            if (userRoles.Contains("Admin") || userRoles.Contains("Moderator"))
-            {
+            var userRole = user.UserRoles.FirstOrDefault().Role?.Name;
+
+            if (userRole.Equals("Admin") || userRole.Equals("Moderator"))
                 throw new UnauthorizedAccessException("You are not allowed to delete Admin or Moderator users.");
-            }
+            
 
             var result = await _userManager.DeleteAsync(user);
 
@@ -165,9 +152,8 @@ namespace CVexplorer.Repositories.Implementation
         public async Task<bool> EnrollUserAsync(int companyId, UserEnrollDTO dto)
         {
             if (await _userManager.FindByNameAsync(dto.Username.ToLower()) != null)
-            {
                 throw new ValidationException("Username is already taken.");
-            }
+            
 
             // ✅ Validate roles before creating user
             var roleToAssign = string.IsNullOrWhiteSpace(dto.UserRole) ? "HRUser" : dto.UserRole;

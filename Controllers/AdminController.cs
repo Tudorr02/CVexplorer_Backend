@@ -135,6 +135,11 @@ namespace CVexplorer.Controllers
         [HttpGet("Companies")]
         public async Task<ActionResult<List<CompanyManagementListDTO>>> GetCompanies()
         {
+            var currentUser = await _userManager.GetUserAsync(User);
+
+            if (currentUser == null)
+                return Unauthorized(new { error = "User not found or not authenticated." });
+
             var companies = await _companyManagement.GetCompaniesAsync();
             return Ok(companies);
         }

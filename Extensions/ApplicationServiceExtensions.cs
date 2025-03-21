@@ -14,7 +14,7 @@ namespace CVexplorer.Extensions
             services.AddControllers();
             services.AddDbContext<DataContext>(opt =>
             {
-                opt.UseSqlServer(configuration.GetConnectionString("LocalConnectionPC"));
+                opt.UseSqlServer(configuration.GetConnectionString("LocalConnection"));
             });
             services.AddCors();
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());

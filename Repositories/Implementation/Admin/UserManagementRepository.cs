@@ -93,7 +93,7 @@ namespace CVexplorer.Repositories.Implementation.Admin
 
                 if(currentRole !=null)
                 {
-                    if (!currentRole.Equals(dto.UserRole))
+                    if (!currentRole.ToLower().Equals(dto.UserRole.ToLower()))
                     {
                         user.UserRoles.Clear();
 

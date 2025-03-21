@@ -62,7 +62,9 @@ namespace CVexplorer.Controllers
         public async Task<ActionResult<List<UserListDTO>>> GetUsers()
         {
             try
-            {  
+            {
+                
+
                 var hrLeader = await _userManager.GetUserAsync(User);
 
                 await ValidateHRLeaderAsync(); // ✅ Validate HR Leader
