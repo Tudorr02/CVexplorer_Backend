@@ -19,14 +19,18 @@ namespace CVexplorer.Repositories.Implementation
 
             var roles = await userManager.GetRolesAsync(user);
 
+            // Get the first (and only) role
+            var role = roles.FirstOrDefault();
+
             var claims = new List<Claim>
             {
                 new(ClaimTypes.NameIdentifier, user.Id.ToString())
             };
 
-            claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
-
-
+            
+            if (!string.IsNullOrEmpty(role))
+                claims.Add(new Claim(ClaimTypes.Role, role));
+       
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
 
             var tokenDescriptor = new SecurityTokenDescriptor

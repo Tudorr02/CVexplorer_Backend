@@ -58,6 +58,10 @@ namespace CVexplorer.Data
                 .HasForeignKey(d => d.CompanyId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<UserRole>()
+                .HasIndex(ur => ur.UserId)
+                .IsUnique();
+
             //modelBuilder.Entity<Department>()
             //     .HasOne(d => d.Company)
             //     .WithMany(c => c.Departments)

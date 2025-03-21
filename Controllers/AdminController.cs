@@ -22,6 +22,12 @@ namespace CVexplorer.Controllers
         [HttpGet("Users")]
         public async Task<ActionResult<List<UserManagementListDTO>>> GetUsers()
         {
+            var currentUser = await _userManager.GetUserAsync(User);
+
+            if(currentUser == null)
+                return Unauthorized(new { error = "User not found or not authenticated." });
+         
+
             var users = await  _userManagement.GetUsersAsync();
             return Ok(users);
 
@@ -33,15 +39,17 @@ namespace CVexplorer.Controllers
             try
             {
                 var currentUser = await _userManager.GetUserAsync(User);
-                var userRoles = await _userManager.GetRolesAsync(currentUser);
 
-                bool isModerator = userRoles.Contains("Moderator") && !userRoles.Contains("Admin");
+                if (currentUser == null)
+                    return Unauthorized(new { error = "User not found or not authenticated." });
+
+                bool isModerator = await _userManager.IsInRoleAsync(currentUser, "Moderator");
+
 
                 // ✅ Prevent Moderators from assigning Admin role
-                if (isModerator && dto.UserRoles.Contains("Admin"))
-                {
+                if (isModerator && dto.UserRole.Equals("Admin"))
                     return Forbid("You are not allowed to assign the Admin role.");
-                }
+                
 
                 // ✅ Prevent modifications to the built-in "admin" user
                 var userToUpdate = await _userManager.FindByIdAsync(userId.ToString());
@@ -101,6 +109,11 @@ namespace CVexplorer.Controllers
         {
             try
             {
+                var currentUser = await _userManager.GetUserAsync(User);
+
+                if (currentUser == null)
+                    return Unauthorized(new { error = "User not found or not authenticated." });
+
                 var result = await _userManagement.EnrollUserAsync(dto);
                 return Ok(result);
             }

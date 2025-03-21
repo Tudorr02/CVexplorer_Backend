@@ -16,6 +16,6 @@ namespace CVexplorer.Models.DTO
 
         public string? Email { get; set; }
 
-        public List<string> UserRoles { get; set; } = [];
+        public string UserRole { get; set; }
     }
 }

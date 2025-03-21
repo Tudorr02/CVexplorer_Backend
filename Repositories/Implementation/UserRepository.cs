@@ -170,12 +170,11 @@ namespace CVexplorer.Repositories.Implementation
             }
 
             // ✅ Validate roles before creating user
-            var rolesToAssign = dto.UserRoles != null && dto.UserRoles.Any() ? dto.UserRoles : new List<string> { "HRUser" };
+            var roleToAssign = string.IsNullOrWhiteSpace(dto.UserRole) ? "HRUser" : dto.UserRole;
             var validRoles = await _context.Roles.Select(r => r.Name).ToListAsync();
-            var invalidRoles = rolesToAssign.Except(validRoles).ToList();
+            if (!validRoles.Contains(roleToAssign))
+                throw new ArgumentException($"Invalid role: {roleToAssign}");
 
-            if (invalidRoles.Any())
-                throw new ArgumentException($"Invalid roles: {string.Join(", ", invalidRoles)}");
 
             var newUser = new User
             {
@@ -189,7 +188,7 @@ namespace CVexplorer.Repositories.Implementation
                 throw new ValidationException($"User creation failed: {string.Join(", ", result.Errors.Select(e => e.Description))}");
             }
 
-            var addRolesResult = await _userManager.AddToRolesAsync(newUser, rolesToAssign);
+            var addRolesResult = await _userManager.AddToRoleAsync(newUser, roleToAssign);
             if (!addRolesResult.Succeeded)
                 throw new ValidationException("Failed to assign roles.");
 
