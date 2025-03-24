@@ -199,6 +199,8 @@ namespace CVexplorer.Repositories.Implementation
         {
             var department = await _context.Departments
                 .Include(d => d.Company)
+                .Include(d => d.Positions)
+                .Include(d =>  d.UserDepartmentAccesses)
                 .FirstOrDefaultAsync(d => d.Id == departmentId);
 
             if (department == null) throw new NotFoundException("Department not found!");

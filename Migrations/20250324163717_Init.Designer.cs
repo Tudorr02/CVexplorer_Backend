@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CVexplorer.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20250319145132_UserAccess")]
-    partial class UserAccess
+    [Migration("20250324163717_Init")]
+    partial class Init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -66,11 +66,9 @@ namespace CVexplorer.Migrations
 
             modelBuilder.Entity("CVexplorer.Models.Domain.Position", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("DepartmentId")
                         .HasColumnType("int");
@@ -230,6 +228,9 @@ namespace CVexplorer.Migrations
 
                     b.HasIndex("RoleId");
 
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
                     b.ToTable("AspNetUserRoles", (string)null);
                 });
 
@@ -358,7 +359,7 @@ namespace CVexplorer.Migrations
                     b.HasOne("CVexplorer.Models.Domain.Department", "Department")
                         .WithMany("UserDepartmentAccesses")
                         .HasForeignKey("DepartmentId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.ClientCascade)
                         .IsRequired();
 
                     b.HasOne("CVexplorer.Models.Domain.User", "User")

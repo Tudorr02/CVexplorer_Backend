@@ -21,70 +21,56 @@ namespace CVexplorer.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            modelBuilder.Entity<User>()
-                .HasMany(u => u.UserRoles)
-                .WithOne(ur => ur.User)
-                .HasForeignKey(ur => ur.UserId)
-                .IsRequired();
-
+            // Company -> Users
             modelBuilder.Entity<User>()
                 .HasOne(u => u.Company)
                 .WithMany(c => c.Users)
                 .HasForeignKey(u => u.CompanyId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<Role>()
-                .HasMany(r => r.UserRoles)
-                .WithOne(ur => ur.Role)
-                .HasForeignKey(ur => ur.RoleId)
-                .IsRequired();
-
-            // ✅ Department - UserDepartmentAccess Relationship (Cascade Delete)
-            modelBuilder.Entity<UserDepartmentAccess>()
-                .HasOne(uda => uda.Department)
-                .WithMany(d => d.UserDepartmentAccesses)
-                .HasForeignKey(uda => uda.DepartmentId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<Position>()
-                .HasOne(p => p.Department)
-                .WithMany(d => d.Positions)
-                .HasForeignKey(p => p.DepartmentId)
-                .OnDelete(DeleteBehavior.Cascade);
-
+            // Company -> Departments
             modelBuilder.Entity<Department>()
                 .HasOne(d => d.Company)
                 .WithMany(c => c.Departments)
                 .HasForeignKey(d => d.CompanyId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // Department -> Positions
+            modelBuilder.Entity<Position>()
+                .HasOne(p => p.Department)
+                .WithMany(d => d.Positions)
+                .HasForeignKey(p => p.DepartmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Department -> UserDepartmentAccess
+            modelBuilder.Entity<UserDepartmentAccess>()
+                .HasOne(uda => uda.Department)
+                .WithMany(d => d.UserDepartmentAccesses)
+                .HasForeignKey(uda => uda.DepartmentId)
+                .OnDelete(DeleteBehavior.ClientCascade); // 👈 simulate cascade
+
+            // User -> UserDepartmentAccess
+            modelBuilder.Entity<UserDepartmentAccess>()
+                .HasOne(uda => uda.User)
+                .WithMany(u => u.UserDepartmentAccesses)
+                .HasForeignKey(uda => uda.UserId)
+                .OnDelete(DeleteBehavior.Cascade); 
+
+
+
             modelBuilder.Entity<UserRole>()
-                .HasIndex(ur => ur.UserId)
-                .IsUnique();
+               .HasIndex(ur => ur.UserId)
+               .IsUnique();
 
-            //modelBuilder.Entity<Department>()
-            //     .HasOne(d => d.Company)
-            //     .WithMany(c => c.Departments)
-            //     .HasForeignKey(d => d.CompanyId)
-            //     .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<UserRole>()
+                .HasOne(ur => ur.User)
+                .WithMany(u => u.UserRoles)
+                .HasForeignKey(ur => ur.UserId);
 
-            //modelBuilder.Entity<Position>()
-            //    .HasOne(p => p.Department)
-            //    .WithMany(d => d.Positions)
-            //    .HasForeignKey(p => p.DepartmentId)
-            //    .OnDelete(DeleteBehavior.Cascade);
-
-            //modelBuilder.Entity<UserDepartmentAccess>()
-            //  .HasOne(uda => uda.User)
-            //  .WithMany(u => u.UserDepartmentAccesses)
-            //  .HasForeignKey(uda => uda.UserId)
-            //  .OnDelete(DeleteBehavior.Restrict);
-
-            //modelBuilder.Entity<UserDepartmentAccess>()
-            //    .HasOne(uda => uda.Department)
-            //    .WithMany(d => d.UserDepartmentAccesses)
-            //    .HasForeignKey(uda => uda.DepartmentId)
-            //    .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<UserRole>()
+                .HasOne(ur => ur.Role)
+                .WithMany(r => r.UserRoles)
+                .HasForeignKey(ur => ur.RoleId);
 
 
         }

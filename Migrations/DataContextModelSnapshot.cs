@@ -63,11 +63,9 @@ namespace CVexplorer.Migrations
 
             modelBuilder.Entity("CVexplorer.Models.Domain.Position", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("DepartmentId")
                         .HasColumnType("int");
@@ -358,7 +356,7 @@ namespace CVexplorer.Migrations
                     b.HasOne("CVexplorer.Models.Domain.Department", "Department")
                         .WithMany("UserDepartmentAccesses")
                         .HasForeignKey("DepartmentId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.ClientCascade)
                         .IsRequired();
 
                     b.HasOne("CVexplorer.Models.Domain.User", "User")

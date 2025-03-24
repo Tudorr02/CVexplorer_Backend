@@ -14,7 +14,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CVexplorer.Controllers
 {
-    [Authorize(Policy = "RequireModeratorRole")]
+    //[Authorize(Policy = "RequireModeratorRole")]
     [ApiController]
     [Route("api/[controller]")]
     public class AdminController(DataContext _context,UserManager<User> _userManager, IDepartmentRepository _departmentManagement ,ICompanyManagementRepository _companyManagement ,IUserManagementRepository _userManagement , IMapper _mapper , ITokenService _tokenService) : Controller
@@ -109,10 +109,10 @@ namespace CVexplorer.Controllers
         {
             try
             {
-                var currentUser = await _userManager.GetUserAsync(User);
+                //var currentUser = await _userManager.GetUserAsync(User);
 
-                if (currentUser == null)
-                    return Unauthorized(new { error = "User not found or not authenticated." });
+                //if (currentUser == null)
+                //    return Unauthorized(new { error = "User not found or not authenticated." });
 
                 var result = await _userManagement.EnrollUserAsync(dto);
                 return Ok(result);
