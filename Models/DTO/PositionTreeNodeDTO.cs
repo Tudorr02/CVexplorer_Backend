@@ -2,7 +2,7 @@
 {
     public class PositionTreeNodeDTO
     {
-        public Guid Id { get; set; }
+        public required string PublicId { get; set; }
         public required string Name { get; set; }
        
     }

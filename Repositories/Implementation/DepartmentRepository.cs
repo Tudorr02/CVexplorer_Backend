@@ -235,7 +235,7 @@ namespace CVexplorer.Repositories.Implementation
                 Name = d.Name,
                 Positions = d.Positions.Select(p => new PositionTreeNodeDTO
                 {
-                    Id = p.Id,
+                    PublicId = p.PublicId,
                     Name = p.Name
                 }).ToList()
             }).ToList();

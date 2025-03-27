@@ -4,6 +4,7 @@ using CVexplorer.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CVexplorer.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20250325184735_AddingPublicId")]
+    partial class AddingPublicId
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -67,7 +70,7 @@ namespace CVexplorer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Certification")
+                    b.Property<string>("Certifications")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -79,14 +82,12 @@ namespace CVexplorer.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Level")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("MinimumEducationLevel")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("MinimumExperienceMonths")
+                    b.Property<int?>("MinimumExperienceMonths")
                         .HasColumnType("int");
 
                     b.Property<string>("Name")
@@ -94,10 +95,6 @@ namespace CVexplorer.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("NiceToHave")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PublicId")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 

@@ -2,6 +2,9 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using System.Text.Json;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace CVexplorer.Data
 {
@@ -73,7 +76,53 @@ namespace CVexplorer.Data
                 .HasForeignKey(ur => ur.RoleId);
 
 
+            var stringListConverter = new ValueConverter<List<string>, string>(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
+                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null) ?? new List<string>());
+
+            var stringListComparer = new ValueComparer<List<string>>(
+                (c1, c2) => c1.SequenceEqual(c2),
+                c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                c => c.ToList());
+
+            modelBuilder.Entity<Position>()
+                 .Property(p => p.RequiredSkills)
+                 .HasConversion(stringListConverter)
+                 .Metadata.SetValueComparer(stringListComparer);
+
+            modelBuilder.Entity<Position>()
+                .Property(p => p.NiceToHave)
+                .HasConversion(stringListConverter)
+                .Metadata.SetValueComparer(stringListComparer);
+
+            modelBuilder.Entity<Position>()
+                .Property(p => p.Languages)
+                .HasConversion(stringListConverter)
+                .Metadata.SetValueComparer(stringListComparer);
+
+            modelBuilder.Entity<Position>()
+                .Property(p => p.Certification)
+                .HasConversion(stringListConverter)
+                .Metadata.SetValueComparer(stringListComparer);
+
+            modelBuilder.Entity<Position>()
+                .Property(p => p.Responsibilities)
+                .HasConversion(stringListConverter)
+                .Metadata.SetValueComparer(stringListComparer);
+
+            // Enums as string (optional but readable)
+            modelBuilder.Entity<Position>()
+                .Property(p => p.Level)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<Position>()
+                .Property(p => p.MinimumEducationLevel)
+                .HasConversion<string>();
+
         }
 
+
     }
+
+    
 }
