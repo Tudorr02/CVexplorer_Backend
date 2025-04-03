@@ -19,6 +19,7 @@ namespace CVexplorer.Data
         public DbSet<Department> Departments { get; set; }
         public DbSet<UserDepartmentAccess> UserDepartmentAccesses { get; set; }
         public DbSet<Position> Positions { get; set; }
+        public DbSet<CV> CVs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -118,6 +119,20 @@ namespace CVexplorer.Data
             modelBuilder.Entity<Position>()
                 .Property(p => p.MinimumEducationLevel)
                 .HasConversion<string>();
+
+            // CV -> Position
+            modelBuilder.Entity<CV>()
+                .HasOne(cv => cv.Position)
+                .WithMany()
+                .HasForeignKey(cv => cv.PositionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // CV -> User
+            modelBuilder.Entity<CV>()
+                .HasOne(cv => cv.UserUploadedBy)
+                .WithMany()
+                .HasForeignKey(cv => cv.UserUploadedById)
+                .OnDelete(DeleteBehavior.ClientSetNull);
 
         }
 

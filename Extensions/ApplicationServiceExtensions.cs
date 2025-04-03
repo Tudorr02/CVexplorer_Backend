@@ -30,6 +30,7 @@ namespace CVexplorer.Extensions
             services.AddScoped<IDepartmentRepository,DepartmentRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IPositionRepository, PositionRepository>();
+            services.AddScoped<ICVRepository, CVRepository>();
 
 
 
