@@ -7,10 +7,14 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Text;
+using UglyToad.PdfPig;
+using UglyToad.PdfPig.Content;
+
 
 namespace CVexplorer.Controllers
 {
-    [Authorize(Policy = "RequireHRUserRole")]
+    //[Authorize(Policy = "RequireHRUserRole")]
     [ApiController]
     [Route("api/[controller]")]
     public class CVsController(DataContext _context, ICVRepository _cvRepository, UserManager<User> _userManager) : Controller
@@ -105,5 +109,24 @@ namespace CVexplorer.Controllers
             return Ok(cv);
         }
 
+        [HttpPost("text")]
+        public string ExtractTextFromPdf(IFormFile pdfFile)
+        {
+            if (pdfFile == null || pdfFile.Length == 0)
+                throw new ArgumentException("Invalid PDF file.");
+
+            var stringBuilder = new StringBuilder();
+
+            using (var stream = pdfFile.OpenReadStream())
+            using (var pdf = PdfDocument.Open(stream))
+            {
+                foreach (Page page in pdf.GetPages())
+                {
+                    stringBuilder.AppendLine(page.Text);
+                }
+            }
+
+            return stringBuilder.ToString();
+        }
     }
 }

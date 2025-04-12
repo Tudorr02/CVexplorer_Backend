@@ -17,7 +17,7 @@ namespace CVexplorer.Models.Domain
         // ➕ Skill-uri opționale (bonus la scor)
         public List<string> NiceToHave { get; set; } = [];
 
-        // 🌐 Limbi necesare: ex. {"English": "B2", "French": "A2"}
+        // 🌐 Limbi necesare: ex. {"English", "French"}
         public List<string> Languages { get; set; } = [];
 
         // 📜 Certificări necesare

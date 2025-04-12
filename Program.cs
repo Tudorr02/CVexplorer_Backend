@@ -40,3 +40,21 @@ app.UseHttpsRedirection();
 app.MapControllers();
 
 app.Run();
+
+
+/*
+ * 
+    dictionary<string,string> ExtractInvoiceDetails ( string InvoicePath){
+        
+        return Details
+    }
+
+    void() Filter Process ( Collection<email> in_Email , dictionary<string,obj> in_Config)
+    {
+        var InvoicesPaths = in_Email.Attachments 
+        var dictionary<string,string> InvoiceDetails = new Dictionary<string,string>();
+
+        var InvoiceDetails = ExtractInvoicesDetails (InvoicesPaths(0));
+    }
+
+ */
