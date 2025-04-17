@@ -16,5 +16,9 @@ namespace CVexplorer.Models.Domain
         public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
         public User? UserUploadedBy { get; set; }
         public int? UserUploadedById { get; set; }
+        //public double Score { get; set; } = 0;
+
+        //public int? EvaluationId { get; set; } 
+        //public CvEvaluationResult? Evaluation { get; set; }
     }
 }

@@ -6,10 +6,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 using System.Text;
-using UglyToad.PdfPig;
-using UglyToad.PdfPig.Content;
+using iText.Kernel.Pdf;
+using iText.Kernel.Pdf.Canvas.Parser;
+using iText.Kernel.Pdf.Canvas.Parser.Listener;
 
 
 namespace CVexplorer.Controllers
@@ -75,7 +75,7 @@ namespace CVexplorer.Controllers
             var position = await _context.Positions.FirstOrDefaultAsync(p => p.PublicId == positionPublicId);
             if (position == null) return NotFound();
 
-            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            var extension = System.IO.Path.GetExtension(file.FileName).ToLowerInvariant();
 
             return extension switch
             {
@@ -109,24 +109,32 @@ namespace CVexplorer.Controllers
             return Ok(cv);
         }
 
-        [HttpPost("text")]
-        public string ExtractTextFromPdf(IFormFile pdfFile)
+        [HttpPost("extract-itext7")]
+        public IActionResult ExtractTextWithIText7(IFormFile file)
         {
-            if (pdfFile == null || pdfFile.Length == 0)
-                throw new ArgumentException("Invalid PDF file.");
+            if (file is null || file.Length == 0)
+                return BadRequest("File is empty or null.");
 
-            var stringBuilder = new StringBuilder();
+            var textBuilder = new StringBuilder();
 
-            using (var stream = pdfFile.OpenReadStream())
-            using (var pdf = PdfDocument.Open(stream))
+            // iText 7
+            using (var stream = file.OpenReadStream())               // nu e nevoie să‑l copiem în alt MemoryStream
+            using (var reader = new PdfReader(stream))
+            using (var pdfDoc = new PdfDocument(reader))
             {
-                foreach (Page page in pdf.GetPages())
+                for (int page = 1; page <= pdfDoc.GetNumberOfPages(); page++)
                 {
-                    stringBuilder.AppendLine(page.Text);
+                    var extractionStrategy = new LocationTextExtractionStrategy();
+                    var pageText = PdfTextExtractor.GetTextFromPage(
+                                       pdfDoc.GetPage(page),
+                                       extractionStrategy);
+
+                    textBuilder.AppendLine(pageText);
                 }
             }
 
-            return stringBuilder.ToString();
+            return Ok(textBuilder.ToString());
         }
+    
     }
 }

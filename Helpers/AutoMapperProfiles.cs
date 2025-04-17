@@ -15,6 +15,9 @@ namespace CVexplorer.Helpers
                 .ForMember(dest => dest.Company, opt => opt.Ignore());  // ❌ Ignore Company object, set it in repository
 
             CreateMap<LoginDTO, User>();
+            CreateMap<Position, PositionDTO>()
+               .ForMember(dest => dest.Certifications,
+                       opt => opt.MapFrom(src => src.Certification));
         }
     }
 }

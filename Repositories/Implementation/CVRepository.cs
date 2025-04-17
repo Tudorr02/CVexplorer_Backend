@@ -9,9 +9,20 @@ using SharpCompress.Common;
 
 using System.IO.Compression;
 
+using iText.Kernel.Pdf;
+using iText.Kernel.Pdf.Canvas.Parser;
+using iText.Kernel.Pdf.Canvas.Parser.Listener;
+using System.Text;
+
+using System.Text.Json;
+using iText.StyledXmlParser.Jsoup.Select;
+using CVexplorer.Services.Interface;
+
+
+
 namespace CVexplorer.Repositories.Implementation
 {
-    public class CVRepository(DataContext _context) : ICVRepository
+    public class CVRepository(DataContext _context , ICvEvaluationService evaluator) : ICVRepository
     { 
 
         public async Task<IEnumerable<CvListDTO>> GetAllCVsAsync(string positionPublicId)
@@ -35,6 +46,16 @@ namespace CVexplorer.Repositories.Implementation
             var extension = Path.GetExtension(file.FileName ?? string.Empty).ToLowerInvariant();
             if (extension != ".pdf")
                 throw new InvalidOperationException("Only PDF files are supported.");
+
+            string cvText;
+            await using (var mem = new MemoryStream())
+            {
+                await file.CopyToAsync(mem);
+                mem.Position = 0; // Reset the stream position to the beginning
+                cvText = ExtractText(mem);
+                CvEvaluationResultDTO eval = await evaluator.EvaluateAsync(cvText, position);
+                Console.WriteLine(eval.ToString());
+            }
 
             using var ms = new MemoryStream();
             await file.CopyToAsync(ms);
@@ -111,6 +132,22 @@ namespace CVexplorer.Repositories.Implementation
                 UploadedBy = cv.UserUploadedBy?.UserName,
                 FileData = cv.Data
             };
+        }
+
+        private string ExtractText(Stream pdfStream)
+        {
+            using var reader = new PdfReader(pdfStream);
+            using var pdf = new PdfDocument(reader);
+
+            var sb = new StringBuilder();
+            for (int i = 1; i <= pdf.GetNumberOfPages(); i++)
+            {
+                var page = pdf.GetPage(i);
+                var strategy = new LocationTextExtractionStrategy();
+                string text = PdfTextExtractor.GetTextFromPage(page, strategy);
+                sb.AppendLine(text);
+            }
+            return sb.ToString();
         }
     }
 }

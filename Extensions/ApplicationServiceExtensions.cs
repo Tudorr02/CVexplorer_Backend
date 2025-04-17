@@ -3,6 +3,8 @@ using CVexplorer.Repositories.Implementation;
 using CVexplorer.Repositories.Implementation.Admin;
 using CVexplorer.Repositories.Interface;
 using CVexplorer.Repositories.Interface.Admin;
+using CVexplorer.Services.Implementation;
+using CVexplorer.Services.Interface;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 
@@ -30,6 +32,11 @@ namespace CVexplorer.Extensions
             services.AddScoped<IDepartmentRepository,DepartmentRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IPositionRepository, PositionRepository>();
+            services.AddHttpClient<ICvEvaluationService, CvEvaluationService>(c =>
+             {
+                 c.BaseAddress = new Uri("http://127.0.0.1:8000");
+                 c.Timeout = TimeSpan.FromSeconds(30);
+             });
             services.AddScoped<ICVRepository, CVRepository>();
 
 
