@@ -21,7 +21,7 @@ namespace CVexplorer.Models.Domain
         public CvScoreValueField<double> MinimumExperienceMonths { get; set; } = new();
         public CvScoreValueField<PositionLevel> Level { get; set; } = new();
         public CvScoreValueField<EducationLevel> MinimumEducationLevel { get; set; } = new();
-        public DateTime EvaluatedAt { get; set; } = DateTime.UtcNow;
+        
 
     }
 }

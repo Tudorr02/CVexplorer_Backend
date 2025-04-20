@@ -11,6 +11,9 @@ namespace CVexplorer.Repositories.Interface
         Task<bool> UploadArchiveAsync(IFormFile archiveFile, string publicPositionId, int userId);
 
         Task<CvDTO> GetCVAsync(Guid publicId);
+
+        Task<CvEvaluationResultDTO> UpdateEvaluationAsync(Guid cvPublicId, CvEvaluationResultDTO editDto);
+
     }
 }
 

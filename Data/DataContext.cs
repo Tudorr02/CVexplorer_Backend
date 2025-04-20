@@ -5,6 +5,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using CVexplorer.Models.Primitives;
+using System.Linq.Expressions;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+using CVexplorer.Enums;
+using System.Text.Json.Serialization;
+using System;
 
 namespace CVexplorer.Data
 {
@@ -20,6 +26,8 @@ namespace CVexplorer.Data
         public DbSet<UserDepartmentAccess> UserDepartmentAccesses { get; set; }
         public DbSet<Position> Positions { get; set; }
         public DbSet<CV> CVs { get; set; }
+
+        public DbSet<CvEvaluationResult> CvEvaluationResults { get; set; }  // ← nou
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -133,6 +141,110 @@ namespace CVexplorer.Data
                 .WithMany()
                 .HasForeignKey(cv => cv.UserUploadedById)
                 .OnDelete(DeleteBehavior.ClientSetNull);
+
+            // CV -> CvEvaluationResult
+            modelBuilder.Entity<CV>()
+                .HasOne(c => c.Evaluation)
+                .WithOne(e => e.Cv)
+                .HasForeignKey<CvEvaluationResult>(e => e.CvId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            var jsonOptions = new JsonSerializerOptions();
+            var enumJsonOptions = new JsonSerializerOptions
+            {
+                Converters =
+                {
+                    new JsonStringEnumConverter()
+                }
+            };
+
+
+            // 1) A generic JSON converter +comparer for any T
+            ValueConverter<T, string> JsonConverter<T> () => new(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<T>(v, jsonOptions)!);
+
+            
+
+            ValueComparer<T> JsonComparer<T>() => new(
+                (a, b) => JsonSerializer.Serialize(a, jsonOptions) == JsonSerializer.Serialize(b, jsonOptions),
+                a => JsonSerializer.Serialize(a, jsonOptions).GetHashCode(),
+                v => JsonSerializer.Deserialize<T>(
+                            JsonSerializer.Serialize(v, jsonOptions), jsonOptions)!);
+
+
+            // For Level and MinimumEducationLevel, use enumJsonOptions
+            ValueConverter<T, string> JsonEnumConverter<T>() => new(
+               v => JsonSerializer.Serialize(v, enumJsonOptions),
+               v => JsonSerializer.Deserialize<T>(v, enumJsonOptions)!);
+
+
+
+            ValueComparer<T> JsonEnumComparer<T>() => new(
+                (a, b) => JsonSerializer.Serialize(a, enumJsonOptions) == JsonSerializer.Serialize(b, enumJsonOptions),
+                a => JsonSerializer.Serialize(a, enumJsonOptions).GetHashCode(),
+                v => JsonSerializer.Deserialize<T>(
+                            JsonSerializer.Serialize(v, enumJsonOptions), enumJsonOptions)!);
+
+
+            // 2) Map each field as its own JSON column:
+            modelBuilder.Entity<CvEvaluationResult>(e =>
+            {
+                
+
+                // CandidateName + EvaluatedAt as before
+                e.Property(x => x.CandidateName)
+                 .IsRequired()
+                 .HasMaxLength(200);
+                
+
+                // ── now the JSON columns ──
+
+                // CvScoreScrapedField<List<string>> types:
+                e.Property(x => x.RequiredSkills)
+                 .HasColumnType("nvarchar(max)")
+                 .HasConversion(JsonConverter<CvScoreScrapedField<List<string>>>())
+                 .Metadata.SetValueComparer(JsonComparer<CvScoreScrapedField<List<string>>>());
+
+                e.Property(x => x.NiceToHave)
+                 .HasColumnType("nvarchar(max)")
+                 .HasConversion(JsonConverter<CvScoreScrapedField<List<string>>>())
+                 .Metadata.SetValueComparer(JsonComparer<CvScoreScrapedField<List<string>>>());
+
+                e.Property(x => x.Certifications)
+                 .HasColumnType("nvarchar(max)")
+                 .HasConversion(JsonConverter<CvScoreScrapedField<List<string>>>())
+                 .Metadata.SetValueComparer(JsonComparer<CvScoreScrapedField<List<string>>>());
+
+                e.Property(x => x.Responsibilities)
+                 .HasColumnType("nvarchar(max)")
+                 .HasConversion(JsonConverter<CvScoreScrapedField<List<string>>>())
+                 .Metadata.SetValueComparer(JsonComparer<CvScoreScrapedField<List<string>>>());
+
+                // CvScoreValueField<List<string>>:
+                e.Property(x => x.Languages)
+                 .HasColumnType("nvarchar(max)")
+                 .HasConversion(JsonConverter<CvScoreValueField<List<string>>>())
+                 .Metadata.SetValueComparer(JsonComparer<CvScoreValueField<List<string>>>());
+
+                // CvScoreValueField<double>:
+                e.Property(x => x.MinimumExperienceMonths)
+                 .HasColumnType("nvarchar(max)")
+                 .HasConversion(JsonConverter<CvScoreValueField<double>>())
+                 .Metadata.SetValueComparer(JsonComparer<CvScoreValueField<double>>());
+
+                // CvScoreValueField<PositionLevel>:
+                e.Property(x => x.Level)
+                 .HasColumnType("nvarchar(max)")
+                 .HasConversion(JsonEnumConverter<CvScoreValueField<PositionLevel>>())
+                 .Metadata.SetValueComparer(JsonEnumComparer <CvScoreValueField<PositionLevel>>());
+
+                // CvScoreValueField<EducationLevel>:
+                e.Property(x => x.MinimumEducationLevel)
+                 .HasColumnType("nvarchar(max)")
+                 .HasConversion(JsonEnumConverter<CvScoreValueField<EducationLevel>>())
+                 .Metadata.SetValueComparer(JsonEnumComparer < CvScoreValueField<EducationLevel>> ());
+            });
 
         }
 

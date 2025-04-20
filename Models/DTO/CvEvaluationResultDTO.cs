@@ -18,34 +18,3 @@ public class CvEvaluationResultDTO
     public CvScoreValueField<PositionLevel> Level { get; init; } = new() { Value = PositionLevel.Intern, Score = 0 };
     public CvScoreValueField<EducationLevel> MinimumEducationLevel { get; init; } = new() { Value = EducationLevel.HighSchool, Score = 0 };
 }
-//public sealed class SkillsResult
-//{
-//    public IList<string> Scraped { get; init; } = new List<string>();
-//    public double Score { get; init; }
-//}
-
-//public sealed class LanguagesResult
-//{
-//    public IList<string> Value { get; init; } = new List<string>();
-//    public double Score { get; init; }
-//}
-
-//public sealed class ExperienceResult
-//{
-//    public double Value { get; init; }
-//    public double Score { get; init; }
-//}
-
-//public sealed class LevelResult
-//{
-//    [JsonConverter(typeof(JsonStringEnumConverter))]
-//    public PositionLevel Value { get; init; }
-//    public double Score { get; init; }
-//}
-
-//public sealed class EducationResult
-//{
-//    [JsonConverter(typeof(JsonStringEnumConverter))]
-//    public EducationLevel Value { get; init; }
-//    public double Score { get; init; }
-//}

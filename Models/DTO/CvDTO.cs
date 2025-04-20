@@ -6,5 +6,7 @@
         public string UploadedAt { get; set; }
         public string? UploadedBy { get; set; }
         public byte[] FileData { get; set; } = null!;
+
+        public CvEvaluationResultDTO Evaluation { get; set; } = new CvEvaluationResultDTO();
     }
 }

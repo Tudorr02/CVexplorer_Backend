@@ -135,6 +135,26 @@ namespace CVexplorer.Controllers
 
             return Ok(textBuilder.ToString());
         }
-    
+
+        [HttpPut("{cvPublicId:guid}/Evaluation")]
+        public async Task<ActionResult<CvEvaluationResultDTO>> UpdateEvaluation(Guid cvPublicId,[FromBody] CvEvaluationResultDTO editDto)
+        {
+            if (!await IsUserAuthorizedAsync(null, cvPublicId))
+                return Forbid();
+
+            if (editDto == null)
+                return BadRequest("Edit data is required.");
+
+            try
+            {
+                var updated = await _cvRepository.UpdateEvaluationAsync(cvPublicId, editDto);
+                return Ok(updated);
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound();
+            }
+        }
+
     }
 }

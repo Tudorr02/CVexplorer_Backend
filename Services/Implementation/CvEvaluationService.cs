@@ -10,8 +10,8 @@ using System.Text.Json.Serialization;
 public class CvEvaluationService(HttpClient http, IMapper mapper) : ICvEvaluationService
 {
 
-    private static readonly JsonSerializerOptions Camel = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-    private static readonly JsonSerializerOptions CaseIns = new() { PropertyNameCaseInsensitive = true };
+    //private static readonly JsonSerializerOptions Camel = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    //private static readonly JsonSerializerOptions CaseIns = new() { PropertyNameCaseInsensitive = true };
 
 
     public async Task<CvEvaluationResultDTO> EvaluateAsync(string cvText, Position position,CancellationToken ct = default)
@@ -24,20 +24,18 @@ public class CvEvaluationService(HttpClient http, IMapper mapper) : ICvEvaluatio
 
         var opts = new JsonSerializerOptions
         {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,                 // leave property names alone
-            Converters = { new JsonStringEnumConverter() }    // leave C# names as-is
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,                 
+            Converters = { new JsonStringEnumConverter() }    
         };
 
 
         using var response = await http.PostAsJsonAsync("/evaluate-cv", payload, opts, ct);
         response.EnsureSuccessStatusCode();
 
-        var result = await response.Content.ReadFromJsonAsync<CvEvaluationResultDTO>(
-            opts,    // this handles camelCase → PascalCase + enum parsing
-            ct);
+        var result = await response.Content.ReadFromJsonAsync<CvEvaluationResultDTO>(opts,ct);
 
         if (result is null)
-            throw new InvalidOperationException("FastAPI returned an empty body.");
+            result = new CvEvaluationResultDTO();
 
         return result;
     }

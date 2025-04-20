@@ -20,7 +20,7 @@ namespace CVexplorer.Extensions
             });
             services.AddDbContext<DataContext>(opt =>
             {
-                opt.UseSqlServer(configuration.GetConnectionString("LocalConnectionPC"));
+                opt.UseSqlServer(configuration.GetConnectionString("LocalConnection"));
             });
             
             services.AddCors();
@@ -34,7 +34,8 @@ namespace CVexplorer.Extensions
             services.AddScoped<IPositionRepository, PositionRepository>();
             services.AddHttpClient<ICvEvaluationService, CvEvaluationService>(c =>
              {
-                 c.BaseAddress = new Uri("http://127.0.0.1:8000");
+                 var pythonBaseURL = "http://127.0.0.1:8000";
+                 c.BaseAddress = new Uri(pythonBaseURL);
                  c.Timeout = TimeSpan.FromSeconds(30);
              });
             services.AddScoped<ICVRepository, CVRepository>();
