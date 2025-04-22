@@ -20,5 +20,7 @@ namespace CVexplorer.Models.Domain
 
         public int? EvaluationId { get; set; }
         public CvEvaluationResult? Evaluation { get; set; }
+
+        public ICollection<RoundEntry> RoundEntries { get; set; } = new List<RoundEntry>();
     }
 }

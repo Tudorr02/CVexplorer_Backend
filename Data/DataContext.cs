@@ -246,6 +246,25 @@ namespace CVexplorer.Data
                  .Metadata.SetValueComparer(JsonEnumComparer < CvScoreValueField<EducationLevel>> ());
             });
 
+
+            modelBuilder.Entity<Position>()
+              .HasMany(p => p.Rounds)
+              .WithOne(r => r.Position)
+              .HasForeignKey(r => r.PositionId)
+              .OnDelete(DeleteBehavior.Cascade);
+
+
+            modelBuilder.Entity<Round>()
+                .HasMany(r => r.RoundEntries)
+                .WithOne(e => e.Round)
+                .HasForeignKey(e => e.RoundId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<CV>()
+              .HasMany(cv => cv.RoundEntries)
+              .WithOne(e => e.Cv)
+              .HasForeignKey(e => e.CvId)
+              .OnDelete(DeleteBehavior.ClientCascade);
         }
 
 
