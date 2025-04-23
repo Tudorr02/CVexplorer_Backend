@@ -248,6 +248,57 @@ namespace CVexplorer.Migrations
                     b.ToTable("AspNetRoles", (string)null);
                 });
 
+            modelBuilder.Entity("CVexplorer.Models.Domain.Round", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("PositionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PositionId");
+
+                    b.ToTable("Rounds");
+                });
+
+            modelBuilder.Entity("CVexplorer.Models.Domain.RoundEntry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CvId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RoundId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Selected")
+                        .HasColumnType("bit");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CvId");
+
+                    b.HasIndex("RoundId");
+
+                    b.ToTable("RoundEntries");
+                });
+
             modelBuilder.Entity("CVexplorer.Models.Domain.User", b =>
                 {
                     b.Property<int>("Id")
@@ -506,6 +557,36 @@ namespace CVexplorer.Migrations
                     b.Navigation("Department");
                 });
 
+            modelBuilder.Entity("CVexplorer.Models.Domain.Round", b =>
+                {
+                    b.HasOne("CVexplorer.Models.Domain.Position", "Position")
+                        .WithMany()
+                        .HasForeignKey("PositionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Position");
+                });
+
+            modelBuilder.Entity("CVexplorer.Models.Domain.RoundEntry", b =>
+                {
+                    b.HasOne("CVexplorer.Models.Domain.CV", "Cv")
+                        .WithMany("RoundEntries")
+                        .HasForeignKey("CvId")
+                        .OnDelete(DeleteBehavior.ClientCascade)
+                        .IsRequired();
+
+                    b.HasOne("CVexplorer.Models.Domain.Round", "Round")
+                        .WithMany("RoundEntries")
+                        .HasForeignKey("RoundId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cv");
+
+                    b.Navigation("Round");
+                });
+
             modelBuilder.Entity("CVexplorer.Models.Domain.User", b =>
                 {
                     b.HasOne("CVexplorer.Models.Domain.Company", "Company")
@@ -593,6 +674,8 @@ namespace CVexplorer.Migrations
             modelBuilder.Entity("CVexplorer.Models.Domain.CV", b =>
                 {
                     b.Navigation("Evaluation");
+
+                    b.Navigation("RoundEntries");
                 });
 
             modelBuilder.Entity("CVexplorer.Models.Domain.Company", b =>
@@ -612,6 +695,11 @@ namespace CVexplorer.Migrations
             modelBuilder.Entity("CVexplorer.Models.Domain.Role", b =>
                 {
                     b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("CVexplorer.Models.Domain.Round", b =>
+                {
+                    b.Navigation("RoundEntries");
                 });
 
             modelBuilder.Entity("CVexplorer.Models.Domain.User", b =>

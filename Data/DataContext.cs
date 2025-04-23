@@ -29,6 +29,9 @@ namespace CVexplorer.Data
 
         public DbSet<CvEvaluationResult> CvEvaluationResults { get; set; }  // ← nou
 
+        public DbSet<RoundEntry> RoundEntries { get; set; }
+        public DbSet<Round> Rounds { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -245,6 +248,18 @@ namespace CVexplorer.Data
                  .HasConversion(JsonEnumConverter<CvScoreValueField<EducationLevel>>())
                  .Metadata.SetValueComparer(JsonEnumComparer < CvScoreValueField<EducationLevel>> ());
             });
+
+            modelBuilder.Entity<Round>()
+              .HasMany(r => r.RoundEntries)
+              .WithOne(e => e.Round)
+              .HasForeignKey(e => e.RoundId)
+              .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<CV>()
+              .HasMany(cv => cv.RoundEntries)
+              .WithOne(e => e.Cv)
+              .HasForeignKey(e => e.CvId)
+              .OnDelete(DeleteBehavior.ClientCascade);
 
         }
 
