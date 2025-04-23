@@ -10,7 +10,6 @@ namespace CVexplorer.Models.Domain
         public required string Name { get; set; }
         public required int DepartmentId { get; set; }
         public required Department Department { get; set; }
-        public ICollection<Round> Rounds { get; set; } = new List<Round>();
 
         // 🔧 Skill-uri obligatorii (tehnice sau nu)
         public List<string> RequiredSkills { get; set; } = [];
