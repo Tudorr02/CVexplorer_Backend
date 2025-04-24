@@ -149,7 +149,7 @@ namespace CVexplorer.Data
             modelBuilder.Entity<CV>()
                 .HasOne(c => c.Evaluation)
                 .WithOne(e => e.Cv)
-                .HasForeignKey<CvEvaluationResult>(e => e.CvId)
+                .HasForeignKey<CV>(c => c.EvaluationId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             var jsonOptions = new JsonSerializerOptions();

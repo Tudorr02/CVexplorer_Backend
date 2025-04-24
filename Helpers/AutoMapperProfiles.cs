@@ -18,6 +18,10 @@ namespace CVexplorer.Helpers
             CreateMap<Position, PositionDTO>()
                .ForMember(dest => dest.Certifications,
                        opt => opt.MapFrom(src => src.Certification));
+
+            CreateMap<Round, RoundListDTO>();
+            CreateMap<RoundListDTO, Round>();
+               
         }
     }
 }

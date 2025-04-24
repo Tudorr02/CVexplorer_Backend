@@ -18,8 +18,8 @@ namespace CVexplorer.Models.Domain
         public int? UserUploadedById { get; set; }
         public double Score { get; set; } = 0;
 
-        public int? EvaluationId { get; set; }
-        public CvEvaluationResult? Evaluation { get; set; }
+        public int EvaluationId { get; set; }
+        public CvEvaluationResult Evaluation { get; set; }
 
         public ICollection<RoundEntry> RoundEntries { get; set; } = new List<RoundEntry>();
 

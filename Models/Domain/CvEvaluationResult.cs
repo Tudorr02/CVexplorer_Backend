@@ -8,7 +8,6 @@ namespace CVexplorer.Models.Domain
     {
         public int Id { get; set; }
 
-        public required int CvId { get; set; }
         public CV Cv { get; set; } 
 
         public string CandidateName { get; set; } = "Not found";

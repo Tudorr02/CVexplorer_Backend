@@ -4,7 +4,8 @@
     {
         public int Id { get; set; }
 
-        public string Name { get; set; } = string.Empty;
+        public required string PublicId { get; set; }
+        public required string Name { get; set; } = string.Empty;
 
         public required Guid PositionId { get; set; }
         public Position Position { get; set; }

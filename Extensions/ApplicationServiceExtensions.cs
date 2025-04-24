@@ -39,8 +39,9 @@ namespace CVexplorer.Extensions
                  c.Timeout = TimeSpan.FromSeconds(30);
              });
             services.AddScoped<ICVRepository, CVRepository>();
-
-
+            services.AddScoped<ICVEvaluationRepository, CVEvaluationRepository>();
+            services.AddScoped<IRoundRepository, RoundRepository>();
+            services.AddScoped<IRoundEntryRepository, RoundEntryRepository>();
 
             return services;
         }

@@ -4,6 +4,7 @@ using CVexplorer.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CVexplorer.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20250424112914_UpdateCV")]
+    partial class UpdateCV
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -61,9 +64,6 @@ namespace CVexplorer.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("EvaluationId")
-                        .IsUnique();
-
                     b.HasIndex("PositionId");
 
                     b.HasIndex("UserUploadedById");
@@ -105,6 +105,9 @@ namespace CVexplorer.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("CvId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Languages")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -134,6 +137,10 @@ namespace CVexplorer.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CvId")
+                        .IsUnique()
+                        .HasFilter("[CvId] IS NOT NULL");
 
                     b.ToTable("CvEvaluationResults");
                 });
@@ -262,10 +269,6 @@ namespace CVexplorer.Migrations
 
                     b.Property<Guid>("PositionId")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("PublicId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -510,12 +513,6 @@ namespace CVexplorer.Migrations
 
             modelBuilder.Entity("CVexplorer.Models.Domain.CV", b =>
                 {
-                    b.HasOne("CVexplorer.Models.Domain.CvEvaluationResult", "Evaluation")
-                        .WithOne("Cv")
-                        .HasForeignKey("CVexplorer.Models.Domain.CV", "EvaluationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("CVexplorer.Models.Domain.Position", "Position")
                         .WithMany()
                         .HasForeignKey("PositionId")
@@ -526,11 +523,19 @@ namespace CVexplorer.Migrations
                         .WithMany()
                         .HasForeignKey("UserUploadedById");
 
-                    b.Navigation("Evaluation");
-
                     b.Navigation("Position");
 
                     b.Navigation("UserUploadedBy");
+                });
+
+            modelBuilder.Entity("CVexplorer.Models.Domain.CvEvaluationResult", b =>
+                {
+                    b.HasOne("CVexplorer.Models.Domain.CV", "Cv")
+                        .WithOne("Evaluation")
+                        .HasForeignKey("CVexplorer.Models.Domain.CvEvaluationResult", "CvId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Cv");
                 });
 
             modelBuilder.Entity("CVexplorer.Models.Domain.Department", b =>
@@ -671,6 +676,9 @@ namespace CVexplorer.Migrations
 
             modelBuilder.Entity("CVexplorer.Models.Domain.CV", b =>
                 {
+                    b.Navigation("Evaluation")
+                        .IsRequired();
+
                     b.Navigation("RoundEntries");
                 });
 
@@ -679,12 +687,6 @@ namespace CVexplorer.Migrations
                     b.Navigation("Departments");
 
                     b.Navigation("Users");
-                });
-
-            modelBuilder.Entity("CVexplorer.Models.Domain.CvEvaluationResult", b =>
-                {
-                    b.Navigation("Cv")
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("CVexplorer.Models.Domain.Department", b =>

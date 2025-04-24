@@ -14,7 +14,7 @@ using iText.Kernel.Pdf.Canvas.Parser.Listener;
 
 namespace CVexplorer.Controllers
 {
-    //[Authorize(Policy = "RequireHRUserRole")]
+    [Authorize(Policy = "RequireHRUserRole")]
     [ApiController]
     [Route("api/[controller]")]
     public class CVsController(DataContext _context, ICVRepository _cvRepository, UserManager<User> _userManager) : Controller
@@ -109,52 +109,34 @@ namespace CVexplorer.Controllers
             return Ok(cv);
         }
 
-        [HttpPost("extract-itext7")]
-        public IActionResult ExtractTextWithIText7(IFormFile file)
-        {
-            if (file is null || file.Length == 0)
-                return BadRequest("File is empty or null.");
+        //[HttpPost("extract-itext7")]
+        //public IActionResult ExtractTextWithIText7(IFormFile file)
+        //{
+        //    if (file is null || file.Length == 0)
+        //        return BadRequest("File is empty or null.");
 
-            var textBuilder = new StringBuilder();
+        //    var textBuilder = new StringBuilder();
 
-            // iText 7
-            using (var stream = file.OpenReadStream())               // nu e nevoie să‑l copiem în alt MemoryStream
-            using (var reader = new PdfReader(stream))
-            using (var pdfDoc = new PdfDocument(reader))
-            {
-                for (int page = 1; page <= pdfDoc.GetNumberOfPages(); page++)
-                {
-                    var extractionStrategy = new LocationTextExtractionStrategy();
-                    var pageText = PdfTextExtractor.GetTextFromPage(
-                                       pdfDoc.GetPage(page),
-                                       extractionStrategy);
+        //    // iText 7
+        //    using (var stream = file.OpenReadStream())               // nu e nevoie să‑l copiem în alt MemoryStream
+        //    using (var reader = new PdfReader(stream))
+        //    using (var pdfDoc = new PdfDocument(reader))
+        //    {
+        //        for (int page = 1; page <= pdfDoc.GetNumberOfPages(); page++)
+        //        {
+        //            var extractionStrategy = new LocationTextExtractionStrategy();
+        //            var pageText = PdfTextExtractor.GetTextFromPage(
+        //                               pdfDoc.GetPage(page),
+        //                               extractionStrategy);
 
-                    textBuilder.AppendLine(pageText);
-                }
-            }
+        //            textBuilder.AppendLine(pageText);
+        //        }
+        //    }
 
-            return Ok(textBuilder.ToString());
-        }
+        //    return Ok(textBuilder.ToString());
+        //}
 
-        [HttpPut("{cvPublicId:guid}/Evaluation")]
-        public async Task<ActionResult<CvEvaluationResultDTO>> UpdateEvaluation(Guid cvPublicId,[FromBody] CvEvaluationResultDTO editDto)
-        {
-            if (!await IsUserAuthorizedAsync(null, cvPublicId))
-                return Forbid();
-
-            if (editDto == null)
-                return BadRequest("Edit data is required.");
-
-            try
-            {
-                var updated = await _cvRepository.UpdateEvaluationAsync(cvPublicId, editDto);
-                return Ok(updated);
-            }
-            catch (KeyNotFoundException)
-            {
-                return NotFound();
-            }
-        }
+        
 
     }
 }

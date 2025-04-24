@@ -1,0 +1,13 @@
+﻿using CVexplorer.Models.Domain;
+using CVexplorer.Models.DTO;
+
+namespace CVexplorer.Repositories.Interface
+{
+    public interface IRoundEntryRepository
+    {
+        Task<IEnumerable<RoundEntryListDTO>> GetAllAsync(int roundId);
+        Task<CvEvaluationDTO> GetRoundEntryAsync(int reId);
+
+        Task CreateAsync(int roundId , int cvId );
+    }
+}
