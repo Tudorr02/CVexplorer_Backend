@@ -5,7 +5,7 @@
         public string FileName { get; set; } = null!;
         public string UploadedAt { get; set; }
         public string? UploadedBy { get; set; }
-        public byte[] FileData { get; set; } = null!;
+        public string FileData { get; set; } = null!;
 
     }
 }

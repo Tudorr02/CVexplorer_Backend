@@ -35,8 +35,10 @@ namespace CVexplorer.Repositories.Implementation
                 {
                     PublicId = cv.PublicId,
                     FileName = cv.FileName,
-                    UploadedAt = cv.UploadedAt.ToString("yyyy-MM-dd HH:mm"),
-                    UploadedBy = cv.UserUploadedBy.UserName
+                    //UploadedAt = cv.UploadedAt.ToString("yyyy-MM-dd HH:mm"),
+                    UploadedAt = cv.UploadedAt,
+                    UploadedBy = cv.UserUploadedBy.UserName,
+                    Score = Convert.ToInt16(cv.Score)
                 }).ToListAsync();
         }
 
@@ -138,9 +140,9 @@ namespace CVexplorer.Repositories.Implementation
             return new CvDTO
             {
                 FileName = cv.FileName ?? "Unnamed",
-                UploadedAt = cv.UploadedAt.ToString("yyyy-MM-dd HH:mm"),
+                UploadedAt = cv.UploadedAt.ToString("yyyy-MM-dd HH:mm:ss"),
                 UploadedBy = cv.UserUploadedBy?.UserName,
-                FileData = cv.Data
+                FileData = Convert.ToBase64String(cv.Data)
                 
             };
         }

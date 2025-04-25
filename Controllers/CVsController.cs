@@ -19,7 +19,7 @@ namespace CVexplorer.Controllers
     [Route("api/[controller]")]
     public class CVsController(DataContext _context, ICVRepository _cvRepository, UserManager<User> _userManager) : Controller
     {
-        private async Task<bool> IsUserAuthorizedAsync(string positionPublicId, Guid ?cvPublicId = null)
+        private async Task<bool> IsUserAuthorizedAsync(string? positionPublicId = null, Guid ?cvPublicId = null, int? departmentId = null)
         {
             var userId = _userManager.GetUserId(User);
             var user = await _userManager.Users
@@ -29,8 +29,26 @@ namespace CVexplorer.Controllers
             if (user == null || user.CompanyId == null)
                 return false;
 
-            
-            if(cvPublicId != null)
+            if (departmentId != null)
+            {
+                var department = await _context.Departments
+                    .Include(d => d.Company)
+                    .FirstOrDefaultAsync(d => d.Id == departmentId);
+                if (department == null)
+                    return false;
+                if (department.CompanyId != user.CompanyId)
+                    return false;
+
+                if (User.IsInRole("HRUser"))
+                {
+                    bool hasAccess = user.UserDepartmentAccesses.Any(a => a.DepartmentId == department.Id);
+                    if (!hasAccess)
+                        return false;
+                }
+
+                return true;
+            }
+            if (cvPublicId != null)
             {
                 var cv = await _context.CVs
                     .Include(c => c.Position)
@@ -86,10 +104,23 @@ namespace CVexplorer.Controllers
         }
 
         [HttpGet()]
-        public async Task<ActionResult<IEnumerable<CvListDTO>>> GetAllCVs(string positionPublicId,int? departmentId)
+        public async Task<ActionResult<IEnumerable<CvListDTO>>> GetAllCVs(string? positionPublicId,int? departmentId)
         {
-            if (!await IsUserAuthorizedAsync(positionPublicId))
+
+            if (departmentId == null && positionPublicId == null)
                 return Forbid();
+
+            if(positionPublicId != null)
+            {
+                if (!await IsUserAuthorizedAsync(positionPublicId))
+                    return Forbid();
+            }
+            else if (departmentId != null)
+            {
+                if (!await IsUserAuthorizedAsync(null, null, departmentId))
+                    return Forbid();
+            }
+            
 
             var cvs = await _cvRepository.GetAllCVsAsync(positionPublicId);
             return Ok(cvs);
