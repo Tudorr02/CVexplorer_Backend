@@ -104,7 +104,7 @@ namespace CVexplorer.Controllers
         }
 
         [HttpGet()]
-        public async Task<ActionResult<IEnumerable<CvListDTO>>> GetAllCVs(string? positionPublicId,int? departmentId)
+        public async Task<ActionResult<IEnumerable<CvListDTO>>> GetAllCVs(string? positionPublicId,int? departmentId = null)
         {
 
             if (departmentId == null && positionPublicId == null)
@@ -122,7 +122,7 @@ namespace CVexplorer.Controllers
             }
             
 
-            var cvs = await _cvRepository.GetAllCVsAsync(positionPublicId);
+            var cvs = await _cvRepository.GetAllCVsAsync(positionPublicId, departmentId);
             return Ok(cvs);
         }
 

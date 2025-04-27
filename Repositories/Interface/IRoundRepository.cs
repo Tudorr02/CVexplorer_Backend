@@ -1,4 +1,5 @@
 ﻿using CVexplorer.Models.Domain;
+using CVexplorer.Models.DTO;
 
 namespace CVexplorer.Repositories.Interface
 {
@@ -6,7 +7,7 @@ namespace CVexplorer.Repositories.Interface
     {
         Task<Round> CreateAsync(Guid positionId);
 
-        Task<IEnumerable<Round>> ListAsync(int? departmentId = null, string? publicPositionId = null);
+        Task<IEnumerable<RoundListDTO>> ListAsync(int? departmentId = null, string? publicPositionId = null);
 
         Task DeleteAsync(string publicId);
 

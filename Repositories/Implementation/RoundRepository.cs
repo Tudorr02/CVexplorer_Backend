@@ -1,5 +1,6 @@
 ﻿using CVexplorer.Data;
 using CVexplorer.Models.Domain;
+using CVexplorer.Models.DTO;
 using CVexplorer.Repositories.Interface;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,32 +25,40 @@ namespace CVexplorer.Repositories.Implementation
 
         }
 
-        public async Task<IEnumerable<Round>> ListAsync(int? departmentId = null, string? publicPositionId = null)
+        public async Task<IEnumerable<RoundListDTO>> ListAsync(int? departmentId = null, string? publicPositionId = null)
         {
             // start from all rounds, include Position so we can filter by department
             var rounds = _context.Rounds
                 .Include(r => r.Position)
                 .ThenInclude(p => p.Department)
+                .Include(r => r.RoundEntries)
                 .AsQueryable();
 
 
             if (!String.IsNullOrEmpty(publicPositionId))
             {
                 rounds = rounds.Where(r => r.Position.PublicId == publicPositionId);
-                return await rounds
-                .OrderBy(r => r.CreatedAt)
-                .ToListAsync();
+
             }
             else if (departmentId.HasValue)
             {
                 rounds = rounds.Where(r => r.Position.DepartmentId == departmentId.Value);
-                return await rounds
-                .OrderBy(r => r.CreatedAt)
-                .ToListAsync();
+
             }
+            else
+                return null;
 
-            return null;
-
+            return await rounds
+                .OrderByDescending(r => r.CreatedAt)
+                .Select(r => new RoundListDTO
+                {
+                    PublicId = r.PublicId,
+                    Name = r.Name,
+                    // … copy over any other Round properties you need …
+                    CreatedAt = r.CreatedAt,
+                    CandidatesNumber = r.RoundEntries.Count
+                })
+                .ToListAsync();
         }
 
         public async Task DeleteAsync(string publicId)

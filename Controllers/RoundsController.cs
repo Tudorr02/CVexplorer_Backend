@@ -90,7 +90,7 @@ namespace CVexplorer.Controllers
             
             if (publicPositionId != null)
             {
-                if (!await IsUserAuthorizedAsync(null, publicPositionId, null))
+                if (!await IsUserAuthorizedAsync(publicPositionId, null, null))
                     return Forbid();
             }
             // 3) Else if filtering by department, enforce department‐level auth
@@ -105,8 +105,7 @@ namespace CVexplorer.Controllers
             if (rounds == null)
                 return NotFound();
 
-            var dtos = _mapper.Map<IEnumerable<RoundListDTO>>(rounds);
-            return Ok(dtos);
+            return Ok(rounds);
         }
 
         [HttpDelete("{publicId}")]

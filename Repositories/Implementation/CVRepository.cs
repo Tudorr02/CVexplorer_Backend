@@ -27,19 +27,37 @@ namespace CVexplorer.Repositories.Implementation
     public class CVRepository(DataContext _context , ICVEvaluationRepository _evaluation , IRoundRepository _roundRepository , IRoundEntryRepository _rEntryRepository) : ICVRepository
     { 
 
-        public async Task<IEnumerable<CvListDTO>> GetAllCVsAsync(string positionPublicId)
+        public async Task<IEnumerable<CvListDTO>> GetAllCVsAsync(string? positionPublicId = null , int?departmentId= null)
         {
-            return await _context.CVs
-                .Where(cv => cv.PositionId == _context.Positions.FirstOrDefault(p => p.PublicId == positionPublicId).Id)
+            var query = _context.CVs.AsQueryable();
+
+            // If a positionPublicId was passed, filter by that position...
+            if (!string.IsNullOrWhiteSpace(positionPublicId))
+            {
+                // EF Core will translate the navigation property join for you,
+                // assuming Cv has a Position navigation property
+                query = query.Where(cv =>
+                    cv.Position.PublicId == positionPublicId);
+            }
+            // ...otherwise if a departmentId was passed, filter by department
+            else if (departmentId.HasValue)
+            {
+                query = query.Where(cv =>
+                    cv.Position.DepartmentId == departmentId.Value);
+            }
+            // else: neither was supplied, so no WHERE clause (returns all CVs)
+
+            // Project to your DTO and execute
+            return await query
                 .Select(cv => new CvListDTO
                 {
                     PublicId = cv.PublicId,
                     FileName = cv.FileName,
-                    //UploadedAt = cv.UploadedAt.ToString("yyyy-MM-dd HH:mm"),
                     UploadedAt = cv.UploadedAt,
                     UploadedBy = cv.UserUploadedBy.UserName,
-                    Score = Convert.ToInt16(cv.Score)
-                }).ToListAsync();
+                    Score = (short)cv.Score
+                })
+                .ToListAsync();
         }
 
         public async Task<bool> UploadDocumentAsync(IFormFile file, string positionPublicId, int userId , int? roundId = null)

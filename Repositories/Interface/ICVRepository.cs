@@ -5,7 +5,7 @@ namespace CVexplorer.Repositories.Interface
 {
     public interface ICVRepository
     {
-        Task<IEnumerable<CvListDTO>> GetAllCVsAsync(string publicPositionId);
+        Task<IEnumerable<CvListDTO>> GetAllCVsAsync(string? publicPositionId = null , int? departmentId =null);
 
         Task<bool> UploadDocumentAsync(IFormFile file, string publicPositionId, int userId , int? roundId =null);
         Task<bool> UploadArchiveAsync(IFormFile archiveFile, string publicPositionId, int userId);
