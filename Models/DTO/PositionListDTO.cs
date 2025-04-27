@@ -14,5 +14,7 @@ namespace CVexplorer.Models.DTO
         public int MinimumExperienceMonths { get; set; } = 0;
         public PositionLevel Level { get; set; } = PositionLevel.Intern;
         public EducationLevel MinimumEducationLevel { get; set; } = EducationLevel.HighSchool;
+        public ScoreWeightsDTO Weights { get; set; } = new ScoreWeightsDTO();
+
     }
 }

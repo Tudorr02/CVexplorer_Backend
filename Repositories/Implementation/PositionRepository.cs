@@ -3,6 +3,7 @@ using CVexplorer.Models.Domain;
 using CVexplorer.Models.DTO;
 using CVexplorer.Repositories.Interface;
 using Microsoft.EntityFrameworkCore;
+using UglyToad.PdfPig.Graphics.Operations.SpecialGraphicsState;
 
 namespace CVexplorer.Repositories.Implementation
 {
@@ -24,7 +25,18 @@ namespace CVexplorer.Repositories.Implementation
                 Responsibilities = position.Responsibilities,
                 MinimumExperienceMonths = position.MinimumExperienceMonths,
                 Level = position.Level,
-                MinimumEducationLevel = position.MinimumEducationLevel
+                MinimumEducationLevel = position.MinimumEducationLevel,
+                Weights = new ScoreWeightsDTO
+                {
+                    RequiredSkills = position.Weights.RequiredSkills,
+                    NiceToHave = position.Weights.NiceToHave,
+                    Languages = position.Weights.Languages,
+                    Certification = position.Weights.Certification,
+                    Responsibilities = position.Weights.Responsibilities,
+                    ExperienceMonths = position.Weights.ExperienceMonths,
+                    Level = position.Weights.Level,
+                    MinimumEducation = position.Weights.MinimumEducation
+                }
             };
         }
 
@@ -44,7 +56,18 @@ namespace CVexplorer.Repositories.Implementation
                 Responsibilities = dto.Responsibilities,
                 MinimumExperienceMonths = dto.MinimumExperienceMonths,
                 Level = dto.Level,
-                MinimumEducationLevel = dto.MinimumEducationLevel
+                MinimumEducationLevel = dto.MinimumEducationLevel,
+                Weights = new ScoreWeights
+                {
+                    RequiredSkills = dto.Weights.RequiredSkills,
+                    NiceToHave = dto.Weights.NiceToHave,
+                    Languages = dto.Weights.Languages,
+                    Certification = dto.Weights.Certification,
+                    Responsibilities = dto.Weights.Responsibilities,
+                    ExperienceMonths = dto.Weights.ExperienceMonths,
+                    Level = dto.Weights.Level,
+                    MinimumEducation = dto.Weights.MinimumEducation
+                }
             };
 
             _context.Positions.Add(position);
@@ -61,7 +84,18 @@ namespace CVexplorer.Repositories.Implementation
                 Responsibilities = position.Responsibilities,
                 MinimumExperienceMonths = position.MinimumExperienceMonths,
                 Level = position.Level,
-                MinimumEducationLevel = position.MinimumEducationLevel
+                MinimumEducationLevel = position.MinimumEducationLevel,
+                Weights = new ScoreWeightsDTO
+                {
+                    RequiredSkills = position.Weights.RequiredSkills,
+                    NiceToHave = position.Weights.NiceToHave,
+                    Languages = position.Weights.Languages,
+                    Certification = position.Weights.Certification,
+                    Responsibilities = position.Weights.Responsibilities,
+                    ExperienceMonths = position.Weights.ExperienceMonths,
+                    Level = position.Weights.Level,
+                    MinimumEducation = position.Weights.MinimumEducation
+                }
             };
         }
 
@@ -80,6 +114,16 @@ namespace CVexplorer.Repositories.Implementation
             position.Level = dto.Level;
             position.MinimumEducationLevel = dto.MinimumEducationLevel;
 
+            position.Weights.RequiredSkills = dto.Weights.RequiredSkills;
+            position.Weights.NiceToHave = dto.Weights.NiceToHave;
+            position.Weights.Languages = dto.Weights.Languages;
+            position.Weights.Certification = dto.Weights.Certification;
+            position.Weights.Responsibilities = dto.Weights.Responsibilities;
+            position.Weights.ExperienceMonths = dto.Weights.ExperienceMonths;
+            position.Weights.Level = dto.Weights.Level;
+            position.Weights.MinimumEducation = dto.Weights.MinimumEducation;
+
+            _context.Positions.Update(position);
             await _context.SaveChangesAsync();
             return true;
         }
