@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CVexplorer.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20250426211712_PositionUpdate")]
-    partial class PositionUpdate
+    [Migration("20250428192951_MovetoPC")]
+    partial class MovetoPC
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

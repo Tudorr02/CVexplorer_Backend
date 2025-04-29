@@ -20,7 +20,7 @@ namespace CVexplorer.Extensions
             });
             services.AddDbContext<DataContext>(opt =>
             {
-                opt.UseSqlServer(configuration.GetConnectionString("LocalConnection"));
+                opt.UseSqlServer(configuration.GetConnectionString("LocalConnectionPC"));
             });
             
             services.AddCors();

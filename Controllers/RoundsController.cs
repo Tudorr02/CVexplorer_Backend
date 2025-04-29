@@ -13,7 +13,7 @@ namespace CVexplorer.Controllers
     [Authorize(Policy = "RequireHRUserRole")]
     [ApiController]
     [Route("api/[controller]")]
-    public class RoundsController(DataContext _context ,IRoundRepository _roundRepository ,UserManager<User> _userManager ,IMapper _mapper) : Controller
+    public class RoundsController(DataContext _context , IRoundEntryRepository _rEntryRepo, IRoundRepository _roundRepository ,UserManager<User> _userManager ,IMapper _mapper) : Controller
     {
         private async Task<bool> IsUserAuthorizedAsync(string? positionPublicId= null, string? roundPublicId = null, int? departmentid = null)
         {
@@ -115,6 +115,17 @@ namespace CVexplorer.Controllers
                 return Forbid();
             await _roundRepository.DeleteAsync(publicId);
             return NoContent();
+        }
+
+        [HttpGet("{publicId}")]
+        public async Task<ActionResult<IEnumerable<RoundEntryListDTO>>> GetRound(string publicId)
+        {
+            if (!await IsUserAuthorizedAsync(null, publicId, null))
+                return Forbid();
+
+            var list = await _rEntryRepo.GetAllAsync(publicId);
+            if (list == null) return NotFound();
+            return Ok(list);
         }
 
     }

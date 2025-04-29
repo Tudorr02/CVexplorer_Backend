@@ -14,7 +14,7 @@ namespace CVexplorer.Controllers
     [Route("api/[controller]")]
     public class RoundEntriesController(DataContext _context, IRoundEntryRepository _rEntryRepo , UserManager<User> _userManager) : Controller
     {
-        private async Task<bool> IsUserAuthorizedAsync(int roundId)
+        private async Task<bool> IsUserAuthorizedAsync(int entryId)
         {
             // 1) Load the current user + their department‐accesses
             var userId = _userManager.GetUserId(User);
@@ -28,6 +28,10 @@ namespace CVexplorer.Controllers
             if (user == null || user.CompanyId == null)
                 return false;
 
+            var roundId = await _context.RoundEntries
+                .Where(re => re.Id == entryId)
+                .Select(re => re.RoundId)
+                .FirstOrDefaultAsync();
             // 2) Load the round → position → department → company
             var round = await _context.Rounds
                 .Include(r => r.Position)
@@ -56,9 +60,9 @@ namespace CVexplorer.Controllers
         }
 
         [HttpGet("{entryId}")]
-        public async Task<ActionResult<CvEvaluationDTO>> GetRoundEntry(int roundId, int entryId)
+        public async Task<ActionResult<CvEvaluationDTO>> GetRoundEntry(int entryId)
         {
-            if (!await IsUserAuthorizedAsync(roundId))
+            if (!await IsUserAuthorizedAsync(entryId))
                 return Forbid();
 
             var dto = await _rEntryRepo.GetRoundEntryAsync(entryId);
@@ -66,16 +70,6 @@ namespace CVexplorer.Controllers
             return Ok(dto);
         }
 
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<RoundEntryListDTO>>> GetAll(int roundId)
-        {
-            if (!await IsUserAuthorizedAsync(roundId))
-                return Forbid();
-
-            var list = await _rEntryRepo.GetAllAsync(roundId);
-            if (list == null) return NotFound();
-            return Ok(list);
-        }
-
+       
     }
 }

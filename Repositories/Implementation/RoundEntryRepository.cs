@@ -10,11 +10,12 @@ namespace CVexplorer.Repositories.Implementation
 {
     public class RoundEntryRepository(DataContext _context) : IRoundEntryRepository
     {
-        public async Task<IEnumerable<RoundEntryListDTO>> GetAllAsync(int roundId)
+        public async Task<IEnumerable<RoundEntryListDTO>> GetAllAsync(string roundId)
         {
             return await _context.RoundEntries
                     .Include(re => re.Cv)
-                   .Where(re => re.RoundId == roundId)
+                    .Include(re => re.Round)
+                   .Where(re => re.Round.PublicId == roundId)
                    .Select(re => new RoundEntryListDTO
                    {
                        Id = re.Id,
