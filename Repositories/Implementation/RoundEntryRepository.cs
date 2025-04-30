@@ -37,6 +37,7 @@ namespace CVexplorer.Repositories.Implementation
             {
                 FileData =Convert.ToBase64String(rEntry.Cv.Data),
                 Score = Convert.ToInt16(rEntry.Cv.Score),
+                cvPublicId = rEntry.Cv.PublicId.ToString(),
                 Evaluation = new CvEvaluationResultDTO
                 {
                     CandidateName = rEntry.Cv.Evaluation.CandidateName,
