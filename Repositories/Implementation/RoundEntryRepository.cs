@@ -30,11 +30,12 @@ namespace CVexplorer.Repositories.Implementation
         {
             var rEntry = await _context.RoundEntries
                 .Include(re => re.Cv)
+                .ThenInclude(cv => cv.Evaluation)
                 .FirstOrDefaultAsync(re => re.Id == reId);
 
             return new CvEvaluationDTO
             {
-                FileData = rEntry.Cv.Data,
+                FileData =Convert.ToBase64String(rEntry.Cv.Data),
                 Score = Convert.ToInt16(rEntry.Cv.Score),
                 Evaluation = new CvEvaluationResultDTO
                 {
