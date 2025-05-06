@@ -62,7 +62,7 @@ namespace CVexplorer.Repositories.Implementation
 
         public async Task<bool> UploadDocumentAsync(IFormFile file, string positionPublicId, int userId , int? roundId = null)
         {
-            var position = await _context.Positions.FirstOrDefaultAsync(p => p.PublicId == positionPublicId)
+            var position = await _context.Positions.Include(p => p.Weights).FirstOrDefaultAsync(p => p.PublicId == positionPublicId)
                 ?? throw new ArgumentException("Position not found.");
 
             var extension = Path.GetExtension(file.FileName ?? string.Empty).ToLowerInvariant();
@@ -86,6 +86,7 @@ namespace CVexplorer.Repositories.Implementation
                 Data = ms.ToArray(),
                 UserUploadedById = userId,
                 Evaluation = evaluation,
+                Score = CalculateScore(evaluation, position.Weights)
             };
 
             _context.CVs.Add(cv);
@@ -146,6 +147,76 @@ namespace CVexplorer.Repositories.Implementation
             return true;
         }
 
+        public async Task<bool> UploadBulkArchiveAsync(IFormFile archiveFile,string positionPublicId,int userId)
+        {
+            var position = await _context.Positions
+                            .Include(p => p.Weights)
+                           .FirstOrDefaultAsync(p => p.PublicId == positionPublicId)
+                           ?? throw new ArgumentException("Position not found.");
+
+            using var stream = archiveFile.OpenReadStream();
+            using var archive = ArchiveFactory.Open(stream);
+
+            var pdfEntries = archive.Entries
+                                    .Where(e => !e.IsDirectory &&
+                                                e.Key.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                                    .ToList();
+
+            if (pdfEntries.Count == 0)
+                throw new InvalidOperationException("Archive contains no PDF files.");
+
+            // 1️⃣  Extragem textele
+            var cvTexts = new List<string>(pdfEntries.Count);
+            var rawFiles = new List<(byte[] data, string fileName)>(pdfEntries.Count);
+
+            foreach (var entry in pdfEntries)
+            {
+                using var ms = new MemoryStream();
+                entry.WriteTo(ms);
+                rawFiles.Add((ms.ToArray(), Path.GetFileName(entry.Key)));
+
+                ms.Position = 0;
+                cvTexts.Add(ExtractText(ms));
+            }
+
+            // 2️⃣  Cerere batch către FastAPI
+            var evals = await _evaluation.CreateBulkAsync(cvTexts, position);
+
+            // 3️⃣  Salvăm totul într‑un singur Round
+            var round = await _roundRepository.CreateAsync(position.Id);
+
+            var cvsToAdd = new List<CV>();
+
+            for (int i = 0; i < rawFiles.Count; i++)
+            {
+                var (data, fileName) = rawFiles[i];
+
+                var cv = new CV
+                {
+                    PositionId = position.Id,
+                    Position = position,
+                    FileName = Path.GetFileNameWithoutExtension(fileName),
+                    ContentType = "application/pdf",
+                    Data = data,
+                    UserUploadedById = userId,
+                    Evaluation = evals[i] ,  // ordinea se păstrează
+                    Score = CalculateScore(evals[i], position.Weights)
+                };
+
+                cvsToAdd.Add(cv);
+                _context.CVs.Add(cv);
+                
+            }
+
+            await _context.SaveChangesAsync();
+
+            // Apoi salvăm în RoundEntry
+            foreach (var cv in cvsToAdd)
+                await _rEntryRepository.CreateAsync(round.Id, cv.Id);
+
+            return true;
+        }
+
         public async Task<CvDTO> GetCVAsync(Guid publicId)
         {
             var cv = await _context.CVs
@@ -181,6 +252,19 @@ namespace CVexplorer.Repositories.Implementation
             return sb.ToString();
         }
 
-       
+        private double CalculateScore(CvEvaluationResult eval , ScoreWeights weights)
+        {
+            return
+            weights.RequiredSkills * eval.RequiredSkills.Score +
+            weights.NiceToHave * eval.NiceToHave.Score +
+            weights.Languages * eval.Languages.Score +
+            weights.Certification * eval.Certifications.Score +
+            weights.Responsibilities * eval.Responsibilities.Score +
+            weights.ExperienceMonths * eval.MinimumExperienceMonths.Score +
+            weights.Level * eval.Level.Score +
+            weights.MinimumEducation * eval.MinimumEducationLevel.Score;
+        }
+
+
     }
 }

@@ -6,5 +6,6 @@ namespace CVexplorer.Services.Interface
     public interface ICvEvaluationService
     {
         Task<CvEvaluationResultDTO> EvaluateAsync(string cvText,Position position,CancellationToken ct = default);
+        Task<List<CvEvaluationResultDTO>> BulkEvaluateAsync(List<string> cvTexts, Position position, CancellationToken ct = default);
     }
 }

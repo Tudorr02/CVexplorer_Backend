@@ -26,6 +26,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseHttpsRedirection();
 app.UseCors(builder => builder
                 .WithOrigins("http://localhost:4205", "https://localhost:4205") // Only allow specific origins
                 .AllowAnyMethod() // Allow all HTTP methods (GET, POST, etc.)
@@ -35,7 +36,6 @@ app.UseCors(builder => builder
 
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseHttpsRedirection();
 
 app.MapControllers();
 

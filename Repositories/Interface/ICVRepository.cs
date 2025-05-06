@@ -9,6 +9,9 @@ namespace CVexplorer.Repositories.Interface
 
         Task<bool> UploadDocumentAsync(IFormFile file, string publicPositionId, int userId , int? roundId =null);
         Task<bool> UploadArchiveAsync(IFormFile archiveFile, string publicPositionId, int userId);
+        Task<bool> UploadBulkArchiveAsync(IFormFile archiveFile,
+                                           string positionPublicId,
+                                           int userId);
 
         Task<CvDTO> GetCVAsync(Guid publicId);
 

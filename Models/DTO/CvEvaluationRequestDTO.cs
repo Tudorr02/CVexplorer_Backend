@@ -7,6 +7,6 @@ namespace CVexplorer.Models.DTO
         [JsonPropertyName("cv_text")]
         public string CvText { get; set; } = null!;
         [JsonPropertyName("position")]
-        public PositionDTO Position { get; set; } = null!;
+        public PositionPayloadInputDTO Position { get; set; } = null!;
     }
 }
