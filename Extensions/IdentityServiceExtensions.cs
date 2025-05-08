@@ -1,6 +1,7 @@
 ﻿using CVexplorer.Data;
 using CVexplorer.Models.Domain;
 using Google.Apis.Gmail.v1;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -27,9 +28,6 @@ namespace CVexplorer.Extensions
                 .AddRoles<Role>()
                 .AddRoleManager<RoleManager<Role>>()
                 .AddEntityFrameworkStores<DataContext>();
-
-
-
 
 
             //services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -66,39 +64,6 @@ namespace CVexplorer.Extensions
             //     };
             // });
 
-
-
-
-            ////GMAIL
-            //services.AddAuthentication(options =>
-            //{
-            //    // Cookie stochează sesiunea locală
-            //    options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-            //    // Challenge (redirect) folosește Google OAuth
-            //    options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
-
-            //    // Dar atunci când "se semnează" (SignInAsync), folosim Cookie
-            //    options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-            //})
-            //.AddCookie(options =>
-            //{
-            //    options.Cookie.SameSite = SameSiteMode.None;
-            //    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-            //}
-            //)
-            //.AddGoogle(options =>
-            //{
-            //options.ClientId = configuration["Google:ClientId"];
-            //options.ClientSecret = configuration["Google:ClientSecret"];
-            ////options.CallbackPath = "/api/Gmail/google-response";
-
-            //options.Scope.Add(GmailService.Scope.GmailLabels);
-            //options.Scope.Add(GmailService.Scope.GmailReadonly);
-            //options.SaveTokens = true;
-            ////options.CallbackPath = "/api/gmail/google-callback";
-            //options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-            //});
-
             services
                 .AddAuthentication(options =>
                 {
@@ -108,9 +73,7 @@ namespace CVexplorer.Extensions
                     // Use Cookie for external sign-ins (Google)
                     options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
 
-                    //options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                    //options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                    //options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
+                     
                 })
                 // JWT Bearer
                 .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
@@ -129,6 +92,16 @@ namespace CVexplorer.Extensions
                     };
                     options.Events = new JwtBearerEvents
                     {
+                        // ❶ Încarcă token-ul din cookie "jwt" dacă există
+                        OnMessageReceived = context =>
+                        {
+                            if (context.Request.Cookies.TryGetValue("jwt", out var jwt))
+                            {
+                                context.Token = jwt;
+                            }
+                            return Task.CompletedTask;
+                        },
+                        // ❷ Verifică dacă token-ul a expirat
                         OnAuthenticationFailed = context =>
                         {
                             if (context.Exception is SecurityTokenExpiredException)
@@ -159,11 +132,7 @@ namespace CVexplorer.Extensions
                     options.Scope.Add(GmailService.Scope.GmailLabels);
                     options.Scope.Add(GmailService.Scope.GmailReadonly);
 
-
-                  
-
                     options.SaveTokens = true;
-                    //options.CallbackPath = "/api/gmail/google-callback";
                     options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
 
                     options.Events.OnRedirectToAuthorizationEndpoint = context =>
@@ -174,6 +143,56 @@ namespace CVexplorer.Extensions
                                   + "&prompt=consent";
                         context.Response.Redirect(uri);
                         return Task.CompletedTask;
+                    };
+
+                    options.Events.OnTicketReceived = async ctx =>
+                    {
+                        var userManager = ctx.HttpContext.RequestServices
+                        .GetRequiredService<UserManager<User>>();
+
+                        if (!ctx.Properties.Items.TryGetValue("UserId", out var localUserId))
+                            return; // n-ai pus UserId în props, deci nu faci nimic
+
+                        var user = await userManager.FindByIdAsync(localUserId);
+                        if (user == null) return;
+                        
+                        var refreshToken = ctx.Properties.GetTokenValue("refresh_token");
+                        if (!string.IsNullOrEmpty(refreshToken))
+                        {
+                            await userManager.SetAuthenticationTokenAsync(
+                                user,
+                                GoogleDefaults.AuthenticationScheme, // provider
+                                "refresh_token",                     // numele tokenului
+                                refreshToken
+                            );
+                        }
+
+                        // 2) Access token (opțional, dar util)
+                        var accessToken = ctx.Properties.GetTokenValue("access_token");
+                        if (!string.IsNullOrEmpty(accessToken))
+                        {
+                            await userManager.SetAuthenticationTokenAsync(
+                                user,
+                                GoogleDefaults.AuthenticationScheme,
+                                "access_token",
+                                accessToken
+                            );
+                        }
+
+                        // 3) Expiration (pentru a şti când expiră access_token)
+                        var expiresAt = ctx.Properties.GetTokenValue("expires_at");
+                        if (!string.IsNullOrEmpty(expiresAt) && DateTimeOffset.TryParse(expiresAt, out var expiresAtDto))
+                        {
+                            var unixSeconds = expiresAtDto.ToUnixTimeSeconds().ToString();
+                            await userManager.SetAuthenticationTokenAsync(
+                                    user,
+                                    GoogleDefaults.AuthenticationScheme,
+                                    "expires_at",
+                                    unixSeconds);
+                        }
+
+                 
+
                     };
                 });
 

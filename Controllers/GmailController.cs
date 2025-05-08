@@ -11,84 +11,117 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.Google;
+using CVexplorer.Models.Domain;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace CVexplorer.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class GmailController : Controller
+    public class GmailController(IConfiguration _config, UserManager<User> _userManager) : Controller
     {
-
-        private readonly IConfiguration _config;
         private readonly string[] _scopes = new[]
         {
             GmailService.Scope.GmailLabels,
             GmailService.Scope.GmailReadonly
         };
 
-        public GmailController(IConfiguration config)
+        private async Task<UserCredential> CheckTokensAsync(string userId)
         {
-            _config = config;
-        }
+            // 1️⃣ Încarcă user-ul
+            var user = await _userManager.FindByIdAsync(userId)
+                       ?? throw new Exception("Utilizator inexistent");
 
+            // 2️⃣ Citește token-urile din AspNetUserTokens
+            var accessToken = await _userManager.GetAuthenticationTokenAsync(
+                                   user, GoogleDefaults.AuthenticationScheme, "access_token");
+            var refreshToken = await _userManager.GetAuthenticationTokenAsync(
+                                   user, GoogleDefaults.AuthenticationScheme, "refresh_token");
+            var expiresAtStr = await _userManager.GetAuthenticationTokenAsync(
+                                   user, GoogleDefaults.AuthenticationScheme, "expires_at");
 
-        /// <summary>
-        /// Pasul 1: Pornește OAuth2-ul Google
-        /// Browserul va fi redirecționat pe Google, iar după login+consent
-        /// middleware-ul Google va prelua callback-ul pe /signin-google
-        /// și va salva token-urile în cookie.
-        /// </summary>
+            // 3️⃣ Parsează expires_at din secunde UNIX
+            DateTimeOffset? expiresAt = null;
+            if (long.TryParse(expiresAtStr, out var unix))
+                expiresAt = DateTimeOffset.FromUnixTimeSeconds(unix);
 
-        [HttpGet("login")]
-        [AllowAnonymous]
-        public IActionResult Login()
-        {
-            
-            
-
-            var props = new AuthenticationProperties
-            {
-                // după autentificare+callback, mută utilizatorul aici
-                RedirectUri = "/api/gmail/labels"
-            };
-            return Challenge(props, GoogleDefaults.AuthenticationScheme);
-        }
-
-        /// <summary>
-        /// Pasul 2: După ce Google middleware a salvat token-urile în cookie,
-        /// tu poți citi etichetele Gmail ale utilizatorului.
-        /// </summary>
-        [HttpGet("labels")]
-      //  [Authorize] // e nevoie să fie autentificat prin cookie
-        public async Task<IActionResult> GetLabels()
-        {
-            // 1. Preia token-urile din cookie
-            var authResult = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            if (!authResult.Succeeded)
-                return Unauthorized();
-
-            var accessToken = authResult.Properties.GetTokenValue("access_token");
-            var refreshToken = authResult.Properties.GetTokenValue("refresh_token");
-
-            // 2. Construiește credentialele Google
-            var secrets = new ClientSecrets
-            {
-                ClientId = _config["Google:ClientId"],
-                ClientSecret = _config["Google:ClientSecret"]
-            };
+            // 4️⃣ Configurează flow-ul Google
             var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
             {
-                ClientSecrets = secrets,
+                ClientSecrets = new ClientSecrets
+                {
+                    ClientId = _config["Google:ClientId"],
+                    ClientSecret = _config["Google:ClientSecret"]
+                },
                 Scopes = _scopes
             });
 
+            // 5️⃣ Creează credential-ul cu token-urile existente
             var tokenResponse = new TokenResponse
             {
                 AccessToken = accessToken,
-                RefreshToken = refreshToken
+                RefreshToken = refreshToken,
+                ExpiresInSeconds = expiresAt.HasValue
+                    ? (long?)(expiresAt.Value - DateTimeOffset.UtcNow).TotalSeconds
+                    : null
             };
+            var credential = new UserCredential(flow, userId, tokenResponse);
 
-            var credential = new UserCredential(flow, authResult.Principal.FindFirst(c => c.Type == ClaimTypes.NameIdentifier)?.Value ?? "user", tokenResponse);
+            // 6️⃣ Dacă accesul e expirat (sau nu aveai expiresAt), reîmprospătează
+            if (!expiresAt.HasValue || expiresAt.Value <= DateTimeOffset.UtcNow)
+            {
+                var gotNew = await credential.RefreshTokenAsync(CancellationToken.None);
+                if (!gotNew)
+                    throw new Exception("Nu am putut reîmprospăta token-ul Google.");
+
+                // 7️⃣ Salvează în DB noile token-uri
+                await _userManager.SetAuthenticationTokenAsync(
+                    user, GoogleDefaults.AuthenticationScheme,
+                    "access_token", credential.Token.AccessToken);
+
+                if (!string.IsNullOrEmpty(credential.Token.RefreshToken))
+                    await _userManager.SetAuthenticationTokenAsync(
+                        user, GoogleDefaults.AuthenticationScheme,
+                        "refresh_token", credential.Token.RefreshToken);
+
+                var newExpiresAt = DateTimeOffset.UtcNow
+                    .AddSeconds(credential.Token.ExpiresInSeconds ?? 0)
+                    .ToUnixTimeSeconds()
+                    .ToString();
+                await _userManager.SetAuthenticationTokenAsync(
+                    user, GoogleDefaults.AuthenticationScheme,
+                    "expires_at", newExpiresAt);
+
+                
+            }
+
+            return credential;
+        }
+
+        [HttpGet("login")]
+        [Authorize]
+        public IActionResult Login()
+        {
+            var userId = _userManager.GetUserId(User);
+            if (userId == null) return Unauthorized();
+
+            var props = new AuthenticationProperties();
+            props.Items["UserId"] = userId;
+            props.RedirectUri = "/api/gmail/labels";
+
+           
+            return Challenge(props, GoogleDefaults.AuthenticationScheme);
+        }
+
+
+        [HttpGet("labels")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> GetLabels()
+        {
+            var jwtUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                       ?? throw new Exception("JWT fără NameIdentifier");
+
+            var credential = await CheckTokensAsync(jwtUserId);
 
             // 3. Apelează Gmail API
             var gmailService = new GmailService(new BaseClientService.Initializer
@@ -96,11 +129,31 @@ namespace CVexplorer.Controllers
                 HttpClientInitializer = credential,
                 ApplicationName = "CVexplorerWebClient"
             });
+            var labels = await gmailService.Users.Labels.List("me").ExecuteAsync();
+            return Ok(labels.Labels);
 
-            var labelRequest = gmailService.Users.Labels.List("me");
-            var labelResponse = await labelRequest.ExecuteAsync();
+        }
 
-            return Ok(labelResponse.Labels);
+        [HttpGet("session")]
+        [Authorize]
+        public async Task<IActionResult> Session()
+        {
+            var result = await HttpContext.AuthenticateAsync(
+                            CookieAuthenticationDefaults.AuthenticationScheme);
+            if (!result.Succeeded || !result.Principal.Identity.IsAuthenticated)
+                return Unauthorized();
+
+
+            // 2️⃣ Grab your “UserId” out of the Items dictionary
+            if (!result.Properties.Items.TryGetValue("UserId", out var localUserId))
+                return BadRequest("No UserId in state");
+
+            var userId = _userManager.GetUserId(User);
+
+            if (userId != localUserId)
+                return Unauthorized();
+
+            return Ok();
         }
 
     }

@@ -52,38 +52,7 @@ namespace CVexplorer.Extensions
             services.AddScoped<IRoundRepository, RoundRepository>();
             services.AddScoped<IRoundEntryRepository, RoundEntryRepository>();
 
-
-
-
-
             services.AddHttpContextAccessor();
-
-
-            //.AddCookie(options =>
-            //    {
-            //        options.Cookie.SameSite = SameSiteMode.None;
-            //        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-            //    }
-
-            //)
-            //.AddGoogle(options =>
-            //{
-            //    options.ClientId = configuration["Google:ClientId"];
-            //    options.ClientSecret = configuration["Google:ClientSecret"];
-
-            //    options.CorrelationCookie.SameSite = SameSiteMode.None;
-            //    //options.NonceCookie.SameSite = SameSiteMode.None;
-
-            //    // This must exactly match what you register in Google Cloud
-            //    options.CallbackPath = "/api/Gmail/google-response";
-            //    options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-
-            //    // Gmail API scopes
-            //    options.Scope.Add(GmailService.Scope.GmailReadonly);
-            //    options.Scope.Add(GmailService.Scope.GmailLabels);
-
-            //    options.SaveTokens = true;
-            //});
 
             return services;
         }
