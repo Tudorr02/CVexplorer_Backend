@@ -64,18 +64,31 @@ namespace CVexplorer.Extensions
             //     };
             // });
 
+
+            //services.ConfigureApplicationCookie(options =>
+            //{
+            //    options.Cookie.HttpOnly = true;
+            //    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            //    options.Cookie.SameSite = SameSiteMode.None;
+            //    options.LoginPath = "/account/login";
+            //    options.LogoutPath = "/account/logout";
+            //    options.ExpireTimeSpan = TimeSpan.FromHours(1);
+            //    options.SlidingExpiration = true;
+            //});
+
             services
                 .AddAuthentication(options =>
                 {
-                    // Validate JWT for API requests
                     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-                    // Use Cookie for external sign-ins (Google)
-                    options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                    //options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                    //options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
 
-                     
+
+                    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                    options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                    options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
                 })
-                // JWT Bearer
+                
                 .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
                 {
                     var tokenKey = configuration["TokenKey"]
@@ -99,8 +112,11 @@ namespace CVexplorer.Extensions
                             {
                                 context.Token = jwt;
                             }
+
                             return Task.CompletedTask;
+
                         },
+                        
                         // ❷ Verifică dacă token-ul a expirat
                         OnAuthenticationFailed = context =>
                         {
@@ -116,13 +132,24 @@ namespace CVexplorer.Extensions
                         }
                     };
                 })
+
                 // Cookie Scheme (for Google OAuth)
-                .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
-                {
-                    options.Cookie.SameSite = SameSiteMode.None;
-                    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-                })
+                //.AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+                //{
+                //    options.Cookie.SameSite = SameSiteMode.None;
+                //    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                //})
                 // Google OAuth2
+                .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, opts =>
+                {
+                    opts.Cookie.Name = "CVexplorer.Cookie";
+                    opts.ExpireTimeSpan = TimeSpan.FromDays(1);
+                    opts.SlidingExpiration = true;
+                    opts.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                    opts.Cookie.SameSite = SameSiteMode.None;
+                    
+                    // … your other cookie options …
+                })
                 .AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
                 {
                     options.ClientId = configuration["Google:ClientId"];
@@ -133,7 +160,7 @@ namespace CVexplorer.Extensions
                     options.Scope.Add(GmailService.Scope.GmailReadonly);
 
                     options.SaveTokens = true;
-                    options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                    //options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
 
                     options.Events.OnRedirectToAuthorizationEndpoint = context =>
                     {
@@ -191,7 +218,22 @@ namespace CVexplorer.Extensions
                                     unixSeconds);
                         }
 
-                 
+                        ctx.Properties.IsPersistent = true;
+
+                        await ctx.HttpContext.SignInAsync(
+                            CookieAuthenticationDefaults.AuthenticationScheme,
+                            ctx.Principal,
+                            ctx.Properties
+                            );
+
+                        // 3) Redirectezi unde vrei
+                        var redirectUri = ctx.ReturnUri ?? "/";
+                        ctx.HttpContext.Response.Redirect(redirectUri);
+
+                        // 4) Blochezi pipeline-ul implicit ca să nu fie dublă redirecționare
+                        ctx.HandleResponse();
+
+                            
 
                     };
                 });

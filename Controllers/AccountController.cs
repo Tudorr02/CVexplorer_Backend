@@ -3,6 +3,11 @@ using CVexplorer.Models.Domain;
 using CVexplorer.Models.DTO;
 using CVexplorer.Repositories.Implementation;
 using CVexplorer.Repositories.Interface;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +16,7 @@ namespace CVexplorer.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class AccountController(UserManager<User> userManager, ITokenService tokenService, IMapper mapper) : Controller
+    public class AccountController(UserManager<User> userManager, ITokenService tokenService, IMapper mapper, UserManager<User> _userManager) : Controller
     {
         [HttpPost("Login")]
         public async Task<ActionResult<AccountDTO>> Login(LoginDTO loginDto)
@@ -50,6 +55,41 @@ namespace CVexplorer.Controllers
             //    Username = user.UserName,
             //    Token = await tokenService.CreateToken(user),
             //};
+        }
+
+        [HttpPost("Logout")]
+        [Authorize(AuthenticationSchemes =
+    JwtBearerDefaults.AuthenticationScheme + "," +
+    CookieAuthenticationDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> Logout()
+        {
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user != null)
+            {
+                await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+                Response.Cookies.Delete("CVexplorer.Cookie", new CookieOptions
+                {
+                    Path = "/",
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.None
+                });
+
+                Response.Cookies.Delete("jwt", new CookieOptions
+                {
+                    Path = "/",
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.None
+                });
+
+            }
+
+            
+
+            return NoContent();
         }
     }
 }

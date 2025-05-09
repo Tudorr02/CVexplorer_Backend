@@ -32,6 +32,9 @@ namespace CVexplorer.Data
         public DbSet<RoundEntry> RoundEntries { get; set; }
         public DbSet<Round> Rounds { get; set; }
 
+        public DbSet<IntegrationSubscription> IntegrationSubscriptions { get; set; }
+
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -260,6 +263,12 @@ namespace CVexplorer.Data
               .WithOne(e => e.Cv)
               .HasForeignKey(e => e.CvId)
               .OnDelete(DeleteBehavior.ClientCascade);
+
+            modelBuilder.Entity<IntegrationSubscription>()
+              .HasOne(s => s.User)
+              .WithMany()
+              .HasForeignKey(s => s.UserId)
+              .OnDelete(DeleteBehavior.Cascade);
 
         }
 
