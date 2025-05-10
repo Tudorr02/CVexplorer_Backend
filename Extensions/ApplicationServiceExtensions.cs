@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Google.Apis.Services;
 using System.Net;
+using CVexplorer.Controllers;
 
 namespace CVexplorer.Extensions
 {
@@ -51,7 +52,9 @@ namespace CVexplorer.Extensions
             services.AddScoped<ICVEvaluationRepository, CVEvaluationRepository>();
             services.AddScoped<IRoundRepository, RoundRepository>();
             services.AddScoped<IRoundEntryRepository, RoundEntryRepository>();
-
+            services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
+            services.AddHostedService<GmailPushBackgroundService>();
+            services.AddTransient<GmailController>();
             services.AddHttpContextAccessor();
 
             return services;

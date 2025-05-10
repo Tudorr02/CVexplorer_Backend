@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CVexplorer.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20250509000805_IntegrationSubscription2")]
-    partial class IntegrationSubscription2
+    [Migration("20250509123617_CreateIS")]
+    partial class CreateIS
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -178,11 +178,18 @@ namespace CVexplorer.Migrations
                     b.Property<DateTimeOffset>("ExpiresAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("LabelId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("PositionId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Provider")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Resource")
+                    b.Property<string>("SubscriptionName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 

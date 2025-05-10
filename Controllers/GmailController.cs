@@ -19,12 +19,14 @@ using Microsoft.EntityFrameworkCore;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using CVexplorer.Services.Interface;
+using CVexplorer.Models.DTO;
 
 namespace CVexplorer.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class GmailController(IConfiguration _config, UserManager<User> _userManager, DataContext _context) : Controller
+    public class GmailController(IConfiguration _config, UserManager<User> _userManager, DataContext _context , IBackgroundTaskQueue _queue , ILogger<GmailController> _logger) : Controller
     {
         private readonly string[] _scopes = new[]
         {
@@ -32,7 +34,8 @@ namespace CVexplorer.Controllers
             GmailService.Scope.GmailReadonly
         };
 
-        private async Task<UserCredential> CheckTokensAsync(string userId)
+        [NonAction]
+        public async Task<UserCredential> CheckTokensAsync(string userId)
         {
             // 1️⃣ Încarcă user-ul
             var user = await _userManager.FindByIdAsync(userId)
@@ -173,9 +176,8 @@ namespace CVexplorer.Controllers
 
 
         [HttpPost("watch")]
-        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme + "," +
-                                 CookieAuthenticationDefaults.AuthenticationScheme)]
-        public async Task<IActionResult> WatchGmail(string labelId)
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme + "," + CookieAuthenticationDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> WatchGmail(string labelId, string positionPublicId)
         {
             var jwtResult = await HttpContext.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme);
             var cookieResult = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
@@ -188,6 +190,10 @@ namespace CVexplorer.Controllers
 
             if (jwtUserId == null || cookieUserId == null || jwtUserId != cookieUserId)
                 return Forbid();
+
+            var position = await _context.Positions
+                .SingleOrDefaultAsync(p => p.PublicId == positionPublicId)
+                ?? throw new Exception("Poziție inexistentă");
 
             var userId = jwtUserId;
 
@@ -202,27 +208,47 @@ namespace CVexplorer.Controllers
                 ApplicationName = "CVexplorerWebClient"
             });
 
+
+            var allLabels = await _context.IntegrationSubscriptions
+            .Where(s => s.UserId == user.Id && s.Provider == "Gmail")
+            .Select(s => s.LabelId)
+            .ToListAsync();
+
+
+            if (!allLabels.Contains(labelId))
+            {
+                allLabels.Add(labelId);
+            }
+
             // 3. Apelează Users.Watch
             var watchReq = new WatchRequest
             {
-                LabelIds = new[] { labelId },
+                LabelIds = allLabels.Distinct().ToArray(),
                 TopicName = $"projects/{_config["Google:ProjectId"]}/topics/{_config["Google:GmailTopic"]}"
+               
             };
             var watchResp = await gmailSvc.Users.Watch(watchReq, "me").ExecuteAsync();
             var profile = await gmailSvc.Users.GetProfile("me").ExecuteAsync();
 
 
             var sub = await _context.IntegrationSubscriptions
-                .SingleOrDefaultAsync(s => s.Provider == "Gmail" && s.UserId == user.Id && s.Resource == $"me/label/{labelId}" && s.Email == profile.EmailAddress);
-
+                 .SingleOrDefaultAsync(s =>
+                     s.Provider == "Gmail" &&
+                     s.UserId == user.Id &&
+                     s.LabelId == labelId &&
+                     s.PositionId == position.Id &&
+                     s.Email == profile.EmailAddress
+                 );
             if (sub == null)
             {
                 sub = new IntegrationSubscription
                 {
                     UserId = user.Id,
                     Provider = "Gmail",
-                    Resource = $"me/label/{labelId}",
+                    LabelId = labelId,
+                    PositionId = position.Id,
                     Email = profile.EmailAddress,
+                    SubscriptionName = watchReq.TopicName
                 };
                 _context.IntegrationSubscriptions.Add(sub);
             }
@@ -233,31 +259,35 @@ namespace CVexplorer.Controllers
 
             return Ok(new
             {
+                watchReq.LabelIds,
                 watchResp.HistoryId,
                 watchResp.Expiration
             });
         }
 
-
-        [HttpPost("push")]
-        [AllowAnonymous]
-        public async Task<IActionResult> GmailPush([FromBody] PubsubPushMessage envelope)
+        [HttpPost("unwatch")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme + "," +
+                            CookieAuthenticationDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> UnwatchGmail(string labelId, string positionPublicId)
         {
-            // 1) Decodează baza64
-            var msg = envelope.Message;
-            var json = Encoding.UTF8.GetString(Convert.FromBase64String(msg.Data));
-            var notif = JsonSerializer.Deserialize<PushNotificationDto>(json)
-                        ?? throw new Exception("Invalid push payload");
+            // 1) Autentificare duală
+            var jwt = await HttpContext.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme);
+            var ck = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            if (!jwt.Succeeded || !ck.Succeeded) return Forbid();
 
-            // 2) Găsește subscripția după email
-            var sub = await _context.IntegrationSubscriptions
-                .SingleAsync(s =>
-                    s.Provider == "Gmail" &&
-                    s.Email == notif.EmailAddress
-                );
+            var userId = jwt.Principal.FindFirstValue(ClaimTypes.NameIdentifier);
+            var cookieUserId = ck.Properties.Items["UserId"];
+            if (userId == null || cookieUserId == null || userId != cookieUserId)
+                return Forbid();
 
-            // 3) Reconstruiește user-ul
-            var userId = sub.UserId.ToString();
+            // 2) Găsește poziția și user-ul
+            var position = await _context.Positions
+                .SingleOrDefaultAsync(p => p.PublicId == positionPublicId)
+                ?? throw new Exception("Poziție inexistentă");
+            var user = await _userManager.FindByIdAsync(userId)
+                       ?? throw new Exception("Utilizator inexistent");
+
+            // 3) Inițializează GmailService
             var cred = await CheckTokensAsync(userId);
             var gmailSvc = new GmailService(new BaseClientService.Initializer
             {
@@ -265,61 +295,105 @@ namespace CVexplorer.Controllers
                 ApplicationName = "CVexplorerWebClient"
             });
 
-            // 4) Delta‐sync history
-            var histReq = gmailSvc.Users.History.List("me");
-            histReq.StartHistoryId = (ulong?)(long.Parse(sub.SyncToken) + 1);
-            var history = await histReq.ExecuteAsync();
+            // 4) Oprește toate watch-urile curente pentru acest user
+            await gmailSvc.Users.Stop("me").ExecuteAsync();
 
-            // 5) Procesează mesajele noi (opțional)
-            // …
+            // 5) Șterge din DB subscripția specifică
+            var subToRemove = await _context.IntegrationSubscriptions
+                .SingleOrDefaultAsync(s =>
+                    s.UserId == user.Id &&
+                    s.Provider == "Gmail" &&
+                    s.LabelId == labelId &&
+                    s.PositionId == position.Id);
+            if (subToRemove != null)
+                _context.IntegrationSubscriptions.Remove(subToRemove);
+                await _context.SaveChangesAsync();
 
-            // 6) Actualizează SyncToken
-            sub.SyncToken = notif.HistoryId;
-            sub.UpdatedAt = DateTimeOffset.UtcNow;
-            await _context.SaveChangesAsync();
+            // 6) Recombină lista de label-uri rămasă și re-lansează Watch (dacă mai are sens)
+            var remainingLabels = await _context.IntegrationSubscriptions
+                .Where(s => s.UserId == user.Id && s.Provider == "Gmail")
+                .Select(s => s.LabelId)
+                .Distinct()
+                .ToListAsync();
 
-            return Ok();
+            if (remainingLabels.Any())
+            {
+                var watchReq = new WatchRequest
+                {
+                    LabelIds = remainingLabels.ToArray(),
+                    TopicName = $"projects/{_config["Google:ProjectId"]}/topics/{_config["Google:GmailTopic"]}"
+
+                };
+                var watchResp = await gmailSvc.Users.Watch(watchReq, "me").ExecuteAsync();
+
+                // actualizează SyncToken pentru toate rămase
+                var now = DateTimeOffset.UtcNow;
+                foreach (var sub in _context.IntegrationSubscriptions
+                             .Where(s => s.UserId == user.Id && s.Provider == "Gmail"))
+                {
+                    sub.SyncToken = watchResp.HistoryId.ToString();
+                    sub.ExpiresAt = now.AddMilliseconds((double)watchResp.Expiration);
+                    sub.UpdatedAt = now;
+                }
+
+                // 7) Persistă modificările
+                await _context.SaveChangesAsync();
+            }
+
+            
+
+            return Ok(new
+            {
+                removedLabel = labelId,
+                remainingLabels
+            });
         }
 
-        // DTO‐urile extinse:
-        public class PubsubPushMessage
+
+        [HttpPost("push")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GmailPush([FromBody] GmailPushDTO envelope)
         {
-            [JsonPropertyName("message")]
-            public PubsubMessage Message { get; set; }
+            // 1️⃣ decode & parse
+            var raw = envelope.Message.Data;
+            var json = Encoding.UTF8.GetString(Convert.FromBase64String(raw));
+            var notif = JsonSerializer.Deserialize<GmailPushNotificationDTO>(json)
+                           ?? throw new Exception("Invalid push payload");
+            var email = notif.EmailAddress;
+            //var newHist = long.Parse(notif.HistoryId);
+            var newHist = notif.HistoryId;
+            _logger.LogInformation("Enqueue GmailPush job for {Email} from history {HistoryId}",
+                                   email, newHist);
 
-            [JsonPropertyName("subscription")]
-            public string Subscription { get; set; }
+            // 2️⃣ determină de unde să pornească sync-ul:
+            var subs = _context.IntegrationSubscriptions
+                       .Where(s => s.Provider == "Gmail" && s.Email == email)
+                       .ToList();
+
+            if (subs == null)
+            {
+                _logger.LogWarning("No subscription found for {Email}, ignoring push", email);
+                return Ok();  // ack anyway
+            }
+
+            foreach (var s in subs)
+            {
+      
+                // enquează job cu Subscription’s Id
+               await  _queue.EnqueueAsync(new GmailPushJobDTO{
+                    InterogationSubscriptionId = s.Id,
+                    EmailAddress = email
+                });
+
+                
+            }
+
+
+            return Accepted();  // 202 == OK for Pub/Sub ack
         }
 
-        public class PubsubMessage
-        {
-            [JsonPropertyName("data")]
-            public string Data { get; set; }
 
-            //[JsonPropertyName("attributes")]
-            //public IDictionary<string, string> Attributes { get; set; }
-
-            // câmpurile camelCase pe care le foloseai deja
-            [JsonPropertyName("messageId")]
-            public string MessageId { get; set; }
-
-            [JsonPropertyName("publishTime")]
-            public string PublishTime { get; set; }
-
-            // PLUS cele cu underscore din JSON
-            [JsonPropertyName("message_id")]
-            public string message_id { get; set; }
-
-            [JsonPropertyName("publish_time")]
-            public string publish_time { get; set; }
-        }
-        public class PushNotificationDto
-        {
-            [JsonPropertyName("emailAddress")]
-            public string EmailAddress { get; set; }
-
-            [JsonPropertyName("historyId")]
-            public string HistoryId { get; set; }
-        }
+        
+        
     }
 }
