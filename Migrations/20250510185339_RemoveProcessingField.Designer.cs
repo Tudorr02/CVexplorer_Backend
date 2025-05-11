@@ -4,6 +4,7 @@ using CVexplorer.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CVexplorer.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20250510185339_RemoveProcessingField")]
+    partial class RemoveProcessingField
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -186,9 +189,6 @@ namespace CVexplorer.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("RoundId")
-                        .HasColumnType("int");
-
                     b.Property<string>("SubscriptionName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -204,9 +204,6 @@ namespace CVexplorer.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("RoundId")
-                        .IsUnique();
 
                     b.HasIndex("UserId");
 
@@ -599,19 +596,11 @@ namespace CVexplorer.Migrations
 
             modelBuilder.Entity("CVexplorer.Models.Domain.IntegrationSubscription", b =>
                 {
-                    b.HasOne("CVexplorer.Models.Domain.Round", "Round")
-                        .WithOne("IntegrationSubscription")
-                        .HasForeignKey("CVexplorer.Models.Domain.IntegrationSubscription", "RoundId")
-                        .OnDelete(DeleteBehavior.ClientCascade)
-                        .IsRequired();
-
                     b.HasOne("CVexplorer.Models.Domain.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Round");
 
                     b.Navigation("User");
                 });
@@ -813,8 +802,6 @@ namespace CVexplorer.Migrations
 
             modelBuilder.Entity("CVexplorer.Models.Domain.Round", b =>
                 {
-                    b.Navigation("IntegrationSubscription");
-
                     b.Navigation("RoundEntries");
                 });
 

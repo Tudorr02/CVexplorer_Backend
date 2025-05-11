@@ -58,9 +58,7 @@ namespace CVexplorer.Controllers
         }
 
         [HttpPost("Logout")]
-        [Authorize(AuthenticationSchemes =
-    JwtBearerDefaults.AuthenticationScheme + "," +
-    CookieAuthenticationDefaults.AuthenticationScheme)]
+        [Authorize]
         public async Task<IActionResult> Logout()
         {
 

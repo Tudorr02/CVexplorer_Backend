@@ -17,6 +17,10 @@
         public DateTimeOffset UpdatedAt { get; set; }
 
         public string SubscriptionName { get; set; }    // numele subscription-ului
+
+        public required int RoundId { get; set; }    // FK către Round
+        public Round Round { get; set; }    // FK către Round
+
     }
 
 }

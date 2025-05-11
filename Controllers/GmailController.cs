@@ -21,12 +21,13 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using CVexplorer.Services.Interface;
 using CVexplorer.Models.DTO;
+using CVexplorer.Repositories.Interface;
 
 namespace CVexplorer.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class GmailController(IConfiguration _config, UserManager<User> _userManager, DataContext _context , IBackgroundTaskQueue _queue , ILogger<GmailController> _logger) : Controller
+    public class GmailController(IConfiguration _config, UserManager<User> _userManager, DataContext _context , IBackgroundTaskQueue _queue , ILogger<GmailController> _logger , IRoundRepository _roundRepository) : Controller
     {
         private readonly string[] _scopes = new[]
         {
@@ -116,9 +117,7 @@ namespace CVexplorer.Controllers
 
             var props = new AuthenticationProperties();
             props.Items["UserId"] = userId;
-            props.RedirectUri = "/api/gmail/labels";
-
-            
+            props.RedirectUri = _config["Google:RedirectUri"];
             return Challenge(props, GoogleDefaults.AuthenticationScheme);
         }
 
@@ -138,9 +137,9 @@ namespace CVexplorer.Controllers
             var cookieUserId = cookieResult.Properties.Items["UserId"];
 
             if (jwtUserId == null || cookieUserId == null || jwtUserId != cookieUserId)
-                return Forbid(); 
+                return Forbid();
 
-
+            
             var credential = await CheckTokensAsync(jwtUserId);
 
             // 3. Apelează Gmail API
@@ -241,6 +240,7 @@ namespace CVexplorer.Controllers
                  );
             if (sub == null)
             {
+                var round = await _roundRepository.CreateAsync(position.Id);
                 sub = new IntegrationSubscription
                 {
                     UserId = user.Id,
@@ -248,7 +248,8 @@ namespace CVexplorer.Controllers
                     LabelId = labelId,
                     PositionId = position.Id,
                     Email = profile.EmailAddress,
-                    SubscriptionName = watchReq.TopicName
+                    SubscriptionName = watchReq.TopicName,
+                    RoundId = round.Id
                 };
                 _context.IntegrationSubscriptions.Add(sub);
             }
