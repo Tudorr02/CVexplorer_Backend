@@ -15,7 +15,7 @@
 
         public ICollection<RoundEntry> RoundEntries { get; set; } = new List<RoundEntry>();
 
-        public IntegrationSubscription? IntegrationSubscription { get; set; } = null;
+        public ICollection<IntegrationSubscription>? IntegrationSubscriptions { get; set; } = new List<IntegrationSubscription>();
 
     }
 }

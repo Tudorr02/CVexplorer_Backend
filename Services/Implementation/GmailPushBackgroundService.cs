@@ -67,6 +67,7 @@ namespace CVexplorer.Services.Implementation
             {
                 HttpClientInitializer = cred,
                 ApplicationName = "CVexplorerWebClient"
+
             });
 
             // 1. History.list
@@ -75,111 +76,58 @@ namespace CVexplorer.Services.Implementation
             histReq.LabelId = sub.LabelId;
             var history = await histReq.ExecuteAsync(ct);
 
-            var relevantHistoryIds = (history.History ?? Enumerable.Empty<History>())
-            .Where(h =>
-                // any new messages that were created already in your label
-                (h.MessagesAdded != null &&
-                 h.MessagesAdded.Any(ma => ma.Message.LabelIds?.Contains(sub.LabelId) == true))
-                ||
-                // any existing messages that just had your label added
-                (h.LabelsAdded != null &&
-                 h.LabelsAdded.Any(la => la.LabelIds?.Contains(sub.LabelId) == true))
-            )
-            // 2) project to just the HistoryId
-            .Select(h => h.Id)
-            .ToList();
-
-            foreach (var histId in relevantHistoryIds)
-            {
-                var histEvent = history.History
-                    .First(h => h.Id == histId);
-
-                var idsFromLabelsAdded = (histEvent.LabelsAdded ?? Enumerable.Empty<HistoryLabelAdded>())
-                .Where(la => la.LabelIds?.Contains(sub.LabelId) == true)
-                .Select(la => la.Message.Id);
-
-                // 2. Din MessagesAdded: toate mesajele noi care au fost create deja cu eticheta sub.LabelId
-                var idsFromMessagesAdded = (histEvent.MessagesAdded ?? Enumerable.Empty<HistoryMessageAdded>())
+            var messageIds = history.History?
+                .SelectMany(h =>
+                    (h.MessagesAdded ?? Enumerable.Empty<HistoryMessageAdded>())
                     .Where(ma => ma.Message.LabelIds?.Contains(sub.LabelId) == true)
-                    .Select(ma => ma.Message.Id);
+                    .Select(ma => ma.Message.Id)
+                    .Concat(
+                    (h.LabelsAdded ?? Enumerable.Empty<HistoryLabelAdded>())
+                    .Where(la => la.LabelIds?.Contains(sub.LabelId) == true)
+                    .Select(la => la.Message.Id)
+                    )
+                )
+                .Distinct()
+                .ToList()
+              ?? new List<string>();
 
-                // 3. Unifici (dacă vrei) și elimini duplicatele:
-                var allRelevantMessageIds = idsFromLabelsAdded
-                    .Concat(idsFromMessagesAdded)
-                    .Distinct();
+            foreach (var msgId in messageIds)
+            {
+                var msgReq = gmail.Users.Messages.Get("me", msgId);
+                msgReq.Format = UsersResource.MessagesResource.GetRequest.FormatEnum.Full;
+                var fullMsg = await msgReq.ExecuteAsync(ct);
 
-                // Exemplu de log:
-                foreach (var messageId in allRelevantMessageIds)
+                // extract headers once
+                var hdrs = fullMsg.Payload.Headers;
+                var from = hdrs.FirstOrDefault(h => h.Name == "From")?.Value ?? "<unknown>";
+                var subject = hdrs.FirstOrDefault(h => h.Name == "Subject")?.Value ?? "<no subject>";
+
+                // 5. Descărcăm toate PDF-urile (filtrare + paralelizare internă)
+                var pdfFiles = await GetPdfFormFilesAsync( gmail,"me",msgId,fullMsg.Payload.Parts ?? Enumerable.Empty<MessagePart>(),ct);
+
+                if (!pdfFiles.Any())
                 {
-                    var msgReq = gmail.Users.Messages.Get("me", messageId);
-                    msgReq.Format = UsersResource.MessagesResource.GetRequest.FormatEnum.Full;
-                    var fullMessage = await msgReq.ExecuteAsync(ct);
+                    _logger.LogWarning("From: {From}, Subject: {Subject} — nu conține PDF", from, subject);
+                    continue;
+                }
 
-                    // 2. Extrage câteva informații de bază din header
-                    string from = fullMessage.Payload.Headers
-                        .FirstOrDefault(h => h.Name == "From")?.Value ?? "<unknown>";
-                    string subject = fullMessage.Payload.Headers
-                        .FirstOrDefault(h => h.Name == "Subject")?.Value ?? "<no subject>";
+                _logger.LogError("From: {From}, Subject: {Subject} — CONȚINE PDF", from, subject);
 
-                    // 3. Verifică atașamentele PDF
-                    bool hasPdf = fullMessage.Payload.Parts?
-                        .Where(p => !string.IsNullOrEmpty(p.Filename))
-                        .Any(p =>
-                            p.Filename.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)
-                            || p.MimeType == "application/pdf"
-                        ) == true;
+                // 6. Obținem publicId-ul poziției o singură dată
+                var positionPublicId = await _context.Positions
+                    .Where(p => p.Id == sub.PositionId)
+                    .Select(p => p.PublicId)
+                    .FirstOrDefaultAsync(ct);
 
-                    
-                    // 4. Răspuns / log
-                    if (hasPdf)
-                    {
-                        _logger.LogError(
-                            "From: {From}, Subject: {Subject} — CONȚINE PDF",
-                            from, subject);
-
-                        var pdfParts = fullMessage.Payload.Parts?
-                            .Where(p => !string.IsNullOrEmpty(p.Filename)
-                         && (p.Filename.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)
-                        || p.MimeType == "application/pdf"))
-                            .ToList() ?? new List<MessagePart>();
-
-                        // 2) Extrage AttachmentId-urile
-                        var attachmentIds = pdfParts
-                            .Select(p => p.Body?.AttachmentId)
-                            .Where(id => !string.IsNullOrEmpty(id))
-                            .ToList();
-
-                        var pId= _context.Positions.Where(p => p.Id == sub.PositionId)
-                            .Select(p => p.PublicId)
-                            .FirstOrDefault();
-                        //_cvRepository.UploadDocumentAsync
-                        foreach (var part in pdfParts)
-                        {
-                            var formFile = await GmailAttachmentHelper
-                               .GetAttachmentAsFormFileAsync(
-                                    gmail,               // instanța GmailService
-                                    "me",                // userId
-                                    messageId,           // id-ul mesajului curent
-                                    part,
-                                    ct
-                               );
-
-                            // Acum poți trimite `formFile` unui repository sau controller care așteaptă IFormFile:
-                            await _cvRepository.UploadDocumentAsync(formFile, pId, sub.User.Id,sub.RoundId);
-                        }
-
-                    }
-                    else
-                    {
-                        _logger.LogWarning(
-                            "From: {From}, Subject: {Subject} — nu conține PDF",
-                            from, subject);
-                    }
+                // 7. Upload
+                foreach (var file in pdfFiles)
+                {
+                    await _cvRepository.UploadDocumentAsync(file,positionPublicId,sub.User.Id,sub.RoundId);
                 }
             }
 
-            // 3. Actualizează SyncToken
-            
+
+
             sub.SyncToken = history.HistoryId.ToString();
             sub.UpdatedAt = DateTimeOffset.UtcNow;
             await _context.SaveChangesAsync(ct);
@@ -187,53 +135,44 @@ namespace CVexplorer.Services.Implementation
          
         }
 
-
-    }
-
-    public static class GmailAttachmentHelper
-    {
-        /// <summary>
-        /// Descarcă un attachment din Gmail și îl transformă într-un IFormFile.
-        /// </summary>
-        public static async Task<IFormFile> GetAttachmentAsFormFileAsync(
-            GmailService gmailSvc,
-            string userId,
-            string messageId,
-            MessagePart attachmentPart,
-            CancellationToken ct = default)
+        private static async Task<List<IFormFile>> GetPdfFormFilesAsync(GmailService gmailSvc,string userId,string messageId,IEnumerable<MessagePart> parts,CancellationToken ct = default)
         {
-            // 1) Extragere attachmentId
-            var attachmentId = attachmentPart.Body?.AttachmentId;
-            if (string.IsNullOrEmpty(attachmentId))
-                throw new InvalidOperationException("Partea nu conține attachmentId.");
+            // 1. Filtrăm doar părțile care sunt PDF
+            var pdfParts = parts
+                .Where(p => !string.IsNullOrEmpty(p.Filename)
+                            && (p.Filename.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)
+                                || p.MimeType == "application/pdf"))
+                .ToList();
 
-            // 2) Descarcă datele
-            var attach = await gmailSvc.Users.Messages.Attachments
-                .Get(userId, messageId, attachmentId)
-                .ExecuteAsync(ct);
-
-            // 3) Decode base64url
-            var base64 = attach.Data;
-            var bytes = Convert.FromBase64String(
-                base64.Replace('-', '+').Replace('_', '/')
-            );
-
-            // 4) Creează un MemoryStream
-            var ms = new MemoryStream(bytes);
-
-            // 5) Construieste FormFile
-            var fileName = attachmentPart.Filename ?? "attachment.pdf";
-            var contentType = attachmentPart.MimeType ?? "application/pdf";
-
-            var formFile = new FormFile(ms, 0, ms.Length,
-                                        name: "file",
-                                        fileName: fileName)
+            // 2. Pentru fiecare attachment, pornim un task de descărcare
+            var downloadTasks = pdfParts.Select(async part =>
             {
-                Headers = new HeaderDictionary(),
-                ContentType = contentType
-            };
+                var attach = await gmailSvc.Users.Messages.Attachments
+                    .Get(userId, messageId, part.Body.AttachmentId)
+                    .ExecuteAsync(ct);
 
-            return formFile;
+                // 3. Decodăm base64url
+                var base64 = attach.Data;
+                var bytes = Convert.FromBase64String(
+                    base64.Replace('-', '+').Replace('_', '/'));
+
+                // 4. Creăm MemoryStream și IFormFile
+                var ms = new MemoryStream(bytes);
+                return (IFormFile)new FormFile(ms, 0, ms.Length,
+                                               name: "file",
+                                               fileName: part.Filename)
+                {
+                    Headers = new HeaderDictionary(),
+                    ContentType = part.MimeType
+                };
+            });
+
+            // 5. Așteptăm ca toate descărcările să se finalizeze
+            return (await Task.WhenAll(downloadTasks)).ToList();
         }
     }
+
+
 }
+
+   

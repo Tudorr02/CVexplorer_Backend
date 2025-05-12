@@ -65,9 +65,16 @@ namespace CVexplorer.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user != null)
             {
-                await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
-                Response.Cookies.Delete("CVexplorer.Cookie", new CookieOptions
+                Response.Cookies.Delete("Google.Auth", new CookieOptions
+                {
+                    Path = "/",
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.None
+                });
+
+                Response.Cookies.Delete("Microsoft.Auth", new CookieOptions
                 {
                     Path = "/",
                     HttpOnly = true,

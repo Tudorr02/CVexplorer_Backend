@@ -270,11 +270,14 @@ namespace CVexplorer.Data
               .HasForeignKey(s => s.UserId)
               .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<Round>()
-            .HasOne(r => r.IntegrationSubscription)
-            .WithOne(s => s.Round)
-            .HasForeignKey<IntegrationSubscription>(s => s.RoundId)
+            
+
+            modelBuilder.Entity<IntegrationSubscription>()
+            .HasOne(s => s.Round)
+            .WithMany(r => r.IntegrationSubscriptions)
+            .HasForeignKey(s => s.RoundId)
             .OnDelete(DeleteBehavior.ClientCascade);
+
 
         }
 

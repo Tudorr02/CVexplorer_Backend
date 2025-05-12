@@ -5,10 +5,14 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using ProjectName.Data.Seeders;
+using System.Security.Claims;
 using System.Text;
+using Microsoft.Identity.Web;
 
 namespace CVexplorer.Extensions
 {
@@ -30,65 +34,14 @@ namespace CVexplorer.Extensions
                 .AddEntityFrameworkStores<DataContext>();
 
 
-            //services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            // .AddJwtBearer(options =>
-            // {
-            //     var tokenKey = configuration["TokenKey"] ?? throw new Exception("TokenKey not found");
-            //     options.TokenValidationParameters = new TokenValidationParameters
-            //     {
-            //         ValidateIssuerSigningKey = true,
-            //         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(tokenKey)),
-            //         ValidateIssuer = false,
-            //         ValidateAudience = false,
-            //         ValidateLifetime = true,
-            //         RequireExpirationTime = true,
 
 
-            //         ClockSkew = TimeSpan.Zero 
 
-            //     };
-
-            //     options.Events = new JwtBearerEvents
-            //     {
-            //         OnAuthenticationFailed = context =>
-            //         {
-            //             if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
-            //             {
-            //                 context.Response.Headers.Add("Token-Expired", "true"); 
-            //                 context.Response.StatusCode = 401; 
-            //                 context.Response.ContentType = "application/json";
-            //                 return context.Response.WriteAsync("{\"error\": \"Token expired. Please log in again.\"}");
-            //             }
-            //             return Task.CompletedTask;
-            //         }
-            //     };
-            // });
-
-
-            //services.ConfigureApplicationCookie(options =>
-            //{
-            //    options.Cookie.HttpOnly = true;
-            //    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-            //    options.Cookie.SameSite = SameSiteMode.None;
-            //    options.LoginPath = "/account/login";
-            //    options.LogoutPath = "/account/logout";
-            //    options.ExpireTimeSpan = TimeSpan.FromHours(1);
-            //    options.SlidingExpiration = true;
-            //});
-
-            services
-                .AddAuthentication(options =>
+            services.AddAuthentication(options =>
                 {
                     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                    //options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-                    //options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-
-
-                    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                    options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                    options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
                 })
-                
+
                 .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
                 {
                     var tokenKey = configuration["TokenKey"]
@@ -116,7 +69,7 @@ namespace CVexplorer.Extensions
                             return Task.CompletedTask;
 
                         },
-                        
+
                         // ❷ Verifică dacă token-ul a expirat
                         OnAuthenticationFailed = context =>
                         {
@@ -132,35 +85,30 @@ namespace CVexplorer.Extensions
                         }
                     };
                 })
-
-                // Cookie Scheme (for Google OAuth)
-                //.AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
-                //{
-                //    options.Cookie.SameSite = SameSiteMode.None;
-                //    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-                //})
-                // Google OAuth2
-                .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, opts =>
+                .AddCookie("GoogleCookie", opts =>
                 {
-                    opts.Cookie.Name = "CVexplorer.Cookie";
-                    opts.ExpireTimeSpan = TimeSpan.FromDays(1);
-                    opts.SlidingExpiration = true;
-                    opts.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                    opts.Cookie.Name = "Google.Auth";
                     opts.Cookie.SameSite = SameSiteMode.None;
-                    
-                    // … your other cookie options …
+                    opts.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                    opts.ExpireTimeSpan = TimeSpan.FromDays(1);
+                })
+                .AddCookie("MicrosoftCookie", opts =>
+                {
+                    opts.Cookie.Name = "Microsoft.Auth";
+                    opts.Cookie.SameSite = SameSiteMode.None;
+                    opts.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                    opts.ExpireTimeSpan = TimeSpan.FromDays(1);
                 })
                 .AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
                 {
                     options.ClientId = configuration["Google:ClientId"];
                     options.ClientSecret = configuration["Google:ClientSecret"];
-                    //options.CallbackPath = "/api/Gmail/google-response";
 
                     options.Scope.Add(GmailService.Scope.GmailLabels);
                     options.Scope.Add(GmailService.Scope.GmailReadonly);
 
                     options.SaveTokens = true;
-                    //options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                    options.SignInScheme = "GoogleCookie";
 
                     options.Events.OnRedirectToAuthorizationEndpoint = context =>
                     {
@@ -178,11 +126,11 @@ namespace CVexplorer.Extensions
                         .GetRequiredService<UserManager<User>>();
 
                         if (!ctx.Properties.Items.TryGetValue("UserId", out var localUserId))
-                            return; // n-ai pus UserId în props, deci nu faci nimic
+                            return; 
 
                         var user = await userManager.FindByIdAsync(localUserId);
                         if (user == null) return;
-                        
+
                         var refreshToken = ctx.Properties.GetTokenValue("refresh_token");
                         if (!string.IsNullOrEmpty(refreshToken))
                         {
@@ -221,7 +169,7 @@ namespace CVexplorer.Extensions
                         ctx.Properties.IsPersistent = true;
 
                         await ctx.HttpContext.SignInAsync(
-                            CookieAuthenticationDefaults.AuthenticationScheme,
+                             "GoogleCookie",
                             ctx.Principal,
                             ctx.Properties
                             );
@@ -233,10 +181,72 @@ namespace CVexplorer.Extensions
                         // 4) Blochezi pipeline-ul implicit ca să nu fie dublă redirecționare
                         ctx.HandleResponse();
 
-                            
-
                     };
-                });
+                })
+                .AddOpenIdConnect("Microsoft",
+                    options =>
+                    {
+                        options.Authority = $"{configuration["Microsoft:AzureAd:Instance"]}{configuration["Microsoft:AzureAd:TenantId"]}/v2.0";
+                        options.ClientId = configuration["Microsoft:AzureAd:ClientId"];
+                        options.ClientSecret = configuration["Microsoft:AzureAd:ClientSecret"];
+                        options.CallbackPath = configuration["Microsoft:AzureAd:CallbackPath"];
+
+                        options.TokenValidationParameters.ValidateIssuer = false;
+                        // PKCE + code flow recomandat
+                        options.ResponseType = OpenIdConnectResponseType.Code;
+                        options.UsePkce = true;
+                        options.SaveTokens = false;
+                        options.SignInScheme = "MicrosoftCookie";
+
+                        options.Scope.Clear();
+                        options.Scope.Add("User.Read");
+                        options.Scope.Add("Mail.Read");
+                        options.Scope.Add("offline_access");
+                        options.Scope.Add("openid");           //  ← obligatoriu
+                        options.Scope.Add("profile");          //  ← util pt. nume/email
+
+                        options.Events = new OpenIdConnectEvents
+                        {
+                            OnTokenValidated = async ctx =>
+                            {
+                                if (!ctx.Properties.Items.TryGetValue("UserId", out var localUserId))
+                                    return;
+
+                                var userManager = ctx.HttpContext.RequestServices.GetRequiredService<UserManager<User>>();
+                                ctx.Properties.IsPersistent = true;
+
+                                var user = await userManager.FindByIdAsync(localUserId);
+                                if (user == null) return;
+
+                                // 2) salvează refresh / access token-ul exact ca la Google
+                                var refreshToken = ctx.TokenEndpointResponse?.RefreshToken;
+                                if (!string.IsNullOrEmpty(refreshToken))
+                                {
+                                    await userManager.SetAuthenticationTokenAsync(
+                                        user, "Microsoft", "refresh_token", refreshToken);
+                                }
+
+                                var accessToken = ctx.TokenEndpointResponse?.AccessToken;
+                                if (!string.IsNullOrEmpty(accessToken))
+                                {
+                                    await userManager.SetAuthenticationTokenAsync(
+                                        user, "Microsoft", "access_token", accessToken);
+                                }
+
+                                var expiresIn = ctx.TokenEndpointResponse?.ExpiresIn;
+                                if (!string.IsNullOrEmpty(expiresIn))
+                                {
+                                    var expiresAt = DateTimeOffset.UtcNow.AddSeconds(double.Parse(expiresIn))
+                                                                         .ToUnixTimeSeconds().ToString();
+                                    await userManager.SetAuthenticationTokenAsync(
+                                        user, "Microsoft", "expires_at", expiresAt);
+                                }
+                            }
+                        };
+                    });
+
+
+
 
 
             // Seed roles using RoleSeeder

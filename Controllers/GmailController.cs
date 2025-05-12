@@ -123,12 +123,13 @@ namespace CVexplorer.Controllers
 
 
         [HttpGet("labels")]
-        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme + "," + CookieAuthenticationDefaults.AuthenticationScheme)]
+        [Authorize(AuthenticationSchemes = $"{JwtBearerDefaults.AuthenticationScheme},{"GoogleCookie"}")]
         public async Task<IActionResult> GetLabels()
         {
             
             var jwtResult = await HttpContext.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme);
-            var cookieResult = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            //var cookieResult = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            var cookieResult = await HttpContext.AuthenticateAsync("GoogleCookie");
 
             if (!jwtResult.Succeeded || !cookieResult.Succeeded)
                 return Forbid(); 
@@ -154,11 +155,13 @@ namespace CVexplorer.Controllers
         }
 
         [HttpGet("session")]
-        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme + "," + CookieAuthenticationDefaults.AuthenticationScheme)]
+        [Authorize(AuthenticationSchemes = $"{JwtBearerDefaults.AuthenticationScheme},{"GoogleCookie"}")]
+
         public async Task<IActionResult> Session()
         {
             var jwtResult = await HttpContext.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme);
-            var cookieResult = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            //var cookieResult = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            var cookieResult = await HttpContext.AuthenticateAsync("GoogleCookie");
 
             if (!jwtResult.Succeeded || !cookieResult.Succeeded)
                 return Forbid();
@@ -175,11 +178,13 @@ namespace CVexplorer.Controllers
 
 
         [HttpPost("watch")]
-        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme + "," + CookieAuthenticationDefaults.AuthenticationScheme)]
-        public async Task<IActionResult> WatchGmail(string labelId, string positionPublicId)
+        [Authorize(AuthenticationSchemes = $"{JwtBearerDefaults.AuthenticationScheme},{"GoogleCookie"}")]
+
+        public async Task<IActionResult> WatchGmail(List<string> labelIds, string positionPublicId)
         {
             var jwtResult = await HttpContext.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme);
-            var cookieResult = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            //var cookieResult = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            var cookieResult = await HttpContext.AuthenticateAsync("GoogleCookie");
 
             if (!jwtResult.Succeeded || !cookieResult.Succeeded)
                 return Forbid();
@@ -207,73 +212,111 @@ namespace CVexplorer.Controllers
                 ApplicationName = "CVexplorerWebClient"
             });
 
+            
 
-            var allLabels = await _context.IntegrationSubscriptions
-            .Where(s => s.UserId == user.Id && s.Provider == "Gmail")
-            .Select(s => s.LabelId)
-            .ToListAsync();
+            // 4. Preluăm etichetele deja folosite pentru acest user și poziție
+            var existingSubs = await _context.IntegrationSubscriptions
+                .Where(s => s.UserId == user.Id && s.Provider == "Gmail" && s.PositionId == position.Id)
+                .ToListAsync();
 
+            
 
-            if (!allLabels.Contains(labelId))
+            // 5. Dacă nu există niciun subscription, creăm o rundă
+            Round initialRound = null;
+            if (!existingSubs.Any())
             {
-                allLabels.Add(labelId);
+                initialRound = await _roundRepository.CreateAsync(position.Id);
+            }
+
+            // 6. Identificăm etichetele de adăugat și de eliminat
+            var toAdd = labelIds.Distinct().Except(existingSubs.Select(s => s.LabelId));
+            var toRemove = existingSubs.Select(s => s.LabelId).Except(labelIds.Distinct());
+
+            // 7. Pentru etichetele eliminate, apelăm stop și ștergem din DB
+            if (toRemove.Any())
+            {
+                // Oprire watch complet (Gmail API nu suportă unwatch per label)
+                await gmailSvc.Users.Stop("me").ExecuteAsync();
+
+                // Ștergem subscripțiile locale
+                var subsToDelete = existingSubs.Where(s => toRemove.Contains(s.LabelId)).ToList();
+                _context.IntegrationSubscriptions.RemoveRange(subsToDelete);
+
+
+            }
+
+            // Combinăm cu noile etichete și eliminăm duplicatele
+            var remainingLabels = existingSubs
+                .Where(s => !toRemove.Contains(s.LabelId))
+                .Select(s => s.LabelId)
+                .Union(toAdd)
+                .Distinct()
+                .ToArray();
+
+            if (!remainingLabels.Any())
+            {
+                return Ok(new
+                {
+                    RequestedLabels = labelIds.Distinct()
+                });
             }
 
             // 3. Apelează Users.Watch
             var watchReq = new WatchRequest
             {
-                LabelIds = allLabels.Distinct().ToArray(),
+                LabelIds = remainingLabels,
                 TopicName = $"projects/{_config["Google:ProjectId"]}/topics/{_config["Google:GmailTopic"]}"
                
             };
             var watchResp = await gmailSvc.Users.Watch(watchReq, "me").ExecuteAsync();
             var profile = await gmailSvc.Users.GetProfile("me").ExecuteAsync();
 
-
-            var sub = await _context.IntegrationSubscriptions
-                 .SingleOrDefaultAsync(s =>
-                     s.Provider == "Gmail" &&
-                     s.UserId == user.Id &&
-                     s.LabelId == labelId &&
-                     s.PositionId == position.Id &&
-                     s.Email == profile.EmailAddress
-                 );
-            if (sub == null)
+            // 6. Pentru fiecare etichetă cerută creăm sau actualizăm IntegrationSubscription
+            foreach (var lbl in labelIds.Distinct())
             {
-                var round = await _roundRepository.CreateAsync(position.Id);
-                sub = new IntegrationSubscription
+
+                var sub = existingSubs.FirstOrDefault(s => s.LabelId == lbl);
+
+
+                if (sub == null)
                 {
-                    UserId = user.Id,
-                    Provider = "Gmail",
-                    LabelId = labelId,
-                    PositionId = position.Id,
-                    Email = profile.EmailAddress,
-                    SubscriptionName = watchReq.TopicName,
-                    RoundId = round.Id
-                };
-                _context.IntegrationSubscriptions.Add(sub);
+                    sub = new IntegrationSubscription
+                    {
+                        UserId = user.Id,
+                        Provider = "Gmail",
+                        LabelId = lbl,
+                        PositionId = position.Id,
+                        Email = profile.EmailAddress,
+                        SubscriptionName = watchReq.TopicName,
+                        RoundId = initialRound != null ? initialRound.Id : existingSubs.First().RoundId
+                    };
+                    _context.IntegrationSubscriptions.Add(sub);
+                }
+
+                // setăm token-ul și expirarea
+                sub.SyncToken = watchResp.HistoryId.ToString();
+                sub.ExpiresAt = DateTimeOffset.UtcNow.AddMilliseconds((double)watchResp.Expiration);
+                sub.UpdatedAt = DateTimeOffset.UtcNow;
             }
-            sub.SyncToken = watchResp.HistoryId.ToString();
-            sub.ExpiresAt = DateTimeOffset.UtcNow.AddMilliseconds((double)watchResp.Expiration);
-            sub.UpdatedAt = DateTimeOffset.UtcNow;
+
+            // 7. Salvăm toate modificările odată
             await _context.SaveChangesAsync();
 
+            // 8. Răspuns
             return Ok(new
             {
-                watchReq.LabelIds,
-                watchResp.HistoryId,
-                watchResp.Expiration
+                RequestedLabels = labelIds.Distinct()
             });
         }
 
         [HttpPost("unwatch")]
-        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme + "," +
-                            CookieAuthenticationDefaults.AuthenticationScheme)]
+        [Authorize(AuthenticationSchemes = $"{JwtBearerDefaults.AuthenticationScheme},{"GoogleCookie"}")]
+
         public async Task<IActionResult> UnwatchGmail(string labelId, string positionPublicId)
         {
             // 1) Autentificare duală
             var jwt = await HttpContext.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme);
-            var ck = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            var ck = await HttpContext.AuthenticateAsync("GoogleCookie");
             if (!jwt.Succeeded || !ck.Succeeded) return Forbid();
 
             var userId = jwt.Principal.FindFirstValue(ClaimTypes.NameIdentifier);
