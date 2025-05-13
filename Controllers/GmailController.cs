@@ -27,7 +27,7 @@ namespace CVexplorer.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class GmailController(IConfiguration _config, UserManager<User> _userManager, DataContext _context , IBackgroundTaskQueue _queue , ILogger<GmailController> _logger , IRoundRepository _roundRepository) : Controller
+    public class GmailController(IConfiguration _config, ICVRepository _cvRepository,UserManager<User> _userManager, DataContext _context , IBackgroundTaskQueue _queue , ILogger<GmailController> _logger , IRoundRepository _roundRepository) : Controller
     {
         private readonly string[] _scopes = new[]
         {
@@ -255,6 +255,8 @@ namespace CVexplorer.Controllers
 
             if (!remainingLabels.Any())
             {
+                await _context.SaveChangesAsync();
+
                 return Ok(new
                 {
                     RequestedLabels = labelIds.Distinct()
@@ -424,10 +426,11 @@ namespace CVexplorer.Controllers
             {
       
                 // enquează job cu Subscription’s Id
-               await  _queue.EnqueueAsync(new GmailPushJobDTO{
-                    InterogationSubscriptionId = s.Id,
-                    EmailAddress = email
-                });
+               await  _queue.EnqueueAsync(new PushJobDTO{
+                   Provider = "Gmail",
+                   SubscriptionId = s.Id.ToString(),
+                   ResourceId = s.LabelId,
+               });
 
                 
             }
@@ -437,7 +440,124 @@ namespace CVexplorer.Controllers
         }
 
 
-        
-        
+        [NonAction]
+        // 4️⃣ metoda pe care o va apela BackgroundService:
+        public async Task ProcessHistoryAsync(long subscriptionId, CancellationToken ct)
+        {
+            // atenție: aici faci toată logica de „delta sync”:
+
+           
+            var sub = await _context.IntegrationSubscriptions.Include(s => s.User).Include(s => s.Round)
+                             .SingleAsync(s => s.Id == subscriptionId, ct);
+
+            var cred = await CheckTokensAsync(sub.UserId.ToString());
+            var gmail = new GmailService(new BaseClientService.Initializer
+            {
+                HttpClientInitializer = cred,
+                ApplicationName = "CVexplorerWebClient"
+
+            });
+
+            // 1. History.list
+            var histReq = gmail.Users.History.List("me");
+            histReq.StartHistoryId = ulong.Parse(sub.SyncToken) + 1;
+            histReq.LabelId = sub.LabelId;
+            var history = await histReq.ExecuteAsync(ct);
+
+            var messageIds = history.History?
+                .SelectMany(h =>
+                    (h.MessagesAdded ?? Enumerable.Empty<HistoryMessageAdded>())
+                    .Where(ma => ma.Message.LabelIds?.Contains(sub.LabelId) == true)
+                    .Select(ma => ma.Message.Id)
+                    .Concat(
+                    (h.LabelsAdded ?? Enumerable.Empty<HistoryLabelAdded>())
+                    .Where(la => la.LabelIds?.Contains(sub.LabelId) == true)
+                    .Select(la => la.Message.Id)
+                    )
+                )
+                .Distinct()
+                .ToList()
+              ?? new List<string>();
+
+            foreach (var msgId in messageIds)
+            {
+                var msgReq = gmail.Users.Messages.Get("me", msgId);
+                msgReq.Format = UsersResource.MessagesResource.GetRequest.FormatEnum.Full;
+                var fullMsg = await msgReq.ExecuteAsync(ct);
+
+                // extract headers once
+                var hdrs = fullMsg.Payload.Headers;
+                var from = hdrs.FirstOrDefault(h => h.Name == "From")?.Value ?? "<unknown>";
+                var subject = hdrs.FirstOrDefault(h => h.Name == "Subject")?.Value ?? "<no subject>";
+
+                // 5. Descărcăm toate PDF-urile (filtrare + paralelizare internă)
+                var pdfFiles = await GetPdfFormFilesAsync(gmail, "me", msgId, fullMsg.Payload.Parts ?? Enumerable.Empty<MessagePart>(), ct);
+
+                if (!pdfFiles.Any())
+                {
+                    _logger.LogWarning("From: {From}, Subject: {Subject} — nu conține PDF", from, subject);
+                    continue;
+                }
+
+                _logger.LogError("From: {From}, Subject: {Subject} — CONȚINE PDF", from, subject);
+
+                // 6. Obținem publicId-ul poziției o singură dată
+                var positionPublicId = await _context.Positions
+                    .Where(p => p.Id == sub.PositionId)
+                    .Select(p => p.PublicId)
+                    .FirstOrDefaultAsync(ct);
+
+                // 7. Upload
+                foreach (var file in pdfFiles)
+                {
+                    await _cvRepository.UploadDocumentAsync(file, positionPublicId, sub.User.Id, sub.RoundId);
+                }
+            }
+
+
+
+            sub.SyncToken = history.HistoryId.ToString();
+            sub.UpdatedAt = DateTimeOffset.UtcNow;
+            await _context.SaveChangesAsync(ct);
+
+
+        }
+        [NonAction]
+        public async Task<List<IFormFile>> GetPdfFormFilesAsync(GmailService gmailSvc, string userId, string messageId, IEnumerable<MessagePart> parts, CancellationToken ct = default)
+        {
+            // 1. Filtrăm doar părțile care sunt PDF
+            var pdfParts = parts
+                .Where(p => !string.IsNullOrEmpty(p.Filename)
+                            && (p.Filename.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)
+                                || p.MimeType == "application/pdf"))
+                .ToList();
+
+            // 2. Pentru fiecare attachment, pornim un task de descărcare
+            var downloadTasks = pdfParts.Select(async part =>
+            {
+                var attach = await gmailSvc.Users.Messages.Attachments
+                    .Get(userId, messageId, part.Body.AttachmentId)
+                    .ExecuteAsync(ct);
+
+                // 3. Decodăm base64url
+                var base64 = attach.Data;
+                var bytes = Convert.FromBase64String(
+                    base64.Replace('-', '+').Replace('_', '/'));
+
+                // 4. Creăm MemoryStream și IFormFile
+                var ms = new MemoryStream(bytes);
+                return (IFormFile)new FormFile(ms, 0, ms.Length,
+                                               name: "file",
+                                               fileName: part.Filename)
+                {
+                    Headers = new HeaderDictionary(),
+                    ContentType = part.MimeType
+                };
+            });
+
+            // 5. Așteptăm ca toate descărcările să se finalizeze
+            return (await Task.WhenAll(downloadTasks)).ToList();
+        }
+
     }
 }

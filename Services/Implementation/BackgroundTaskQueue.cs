@@ -7,12 +7,12 @@ namespace CVexplorer.Services.Implementation
 {
     public class BackgroundTaskQueue : IBackgroundTaskQueue
     {
-        private readonly Channel<GmailPushJobDTO> _channel = Channel.CreateUnbounded<GmailPushJobDTO>();
+        private readonly Channel<PushJobDTO> _channel = Channel.CreateUnbounded<PushJobDTO>();
 
-        public ValueTask EnqueueAsync(GmailPushJobDTO job) =>
+        public ValueTask EnqueueAsync(PushJobDTO job) =>
             _channel.Writer.WriteAsync(job);
 
-        public async IAsyncEnumerable<GmailPushJobDTO> DequeueAllAsync([EnumeratorCancellation] CancellationToken ct)
+        public async IAsyncEnumerable<PushJobDTO> DequeueAllAsync([EnumeratorCancellation] CancellationToken ct)
         {
             while (await _channel.Reader.WaitToReadAsync(ct))
             {

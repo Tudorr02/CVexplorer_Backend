@@ -4,7 +4,7 @@ namespace CVexplorer.Services.Interface
 {
     public interface IBackgroundTaskQueue
     {
-        ValueTask EnqueueAsync(GmailPushJobDTO job);
-        IAsyncEnumerable<GmailPushJobDTO> DequeueAllAsync(CancellationToken ct);
+        ValueTask EnqueueAsync(PushJobDTO job);
+        IAsyncEnumerable<PushJobDTO> DequeueAllAsync(CancellationToken ct);
     }
 }

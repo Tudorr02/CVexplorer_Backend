@@ -53,9 +53,10 @@ namespace CVexplorer.Extensions
             services.AddScoped<IRoundRepository, RoundRepository>();
             services.AddScoped<IRoundEntryRepository, RoundEntryRepository>();
             services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
-            services.AddHostedService<GmailPushBackgroundService>();
+            services.AddHostedService<PushBackgroundService>();
             services.AddTransient<GmailController>();
             services.AddHttpContextAccessor();
+            services.AddTransient<OutlookController>();
 
             return services;
         }

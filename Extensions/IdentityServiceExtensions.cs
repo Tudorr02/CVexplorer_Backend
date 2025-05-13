@@ -205,6 +205,8 @@ namespace CVexplorer.Extensions
                         options.Scope.Add("openid");           //  ← obligatoriu
                         options.Scope.Add("profile");          //  ← util pt. nume/email
 
+                        options.Scope.Add("Mail.Send");
+
                         options.Events = new OpenIdConnectEvents
                         {
                             OnTokenValidated = async ctx =>
