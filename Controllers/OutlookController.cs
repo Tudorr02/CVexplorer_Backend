@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.SignalR;
 using CVexplorer.Repositories.Implementation;
 using CVexplorer.Models.DTO;
 using CVexplorer.Services.Interface;
+using System.Text.RegularExpressions;
 
 namespace CVexplorer.Controllers
 {
@@ -151,7 +152,7 @@ namespace CVexplorer.Controllers
 
         [HttpGet("folders")]
         [Authorize(AuthenticationSchemes = $"{JwtBearerDefaults.AuthenticationScheme},{"MicrosoftCookie"}")]
-        public async Task<IActionResult> GetFolders()
+        public async Task<IActionResult> GetFolders(string publicPosId)
         {
             var jwtResult = await HttpContext.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme);
             //var cookieResult = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
@@ -188,9 +189,29 @@ namespace CVexplorer.Controllers
                 page = await page.NextPageRequest.GetAsync();
                 allFolders.AddRange(page.CurrentPage);
             }
+            var position = _context.Positions.First(p => p.PublicId == publicPosId);
 
-            // 4) Returnăm lista de foldere
-            return Ok(allFolders);
+            // 4) Load your Outlook subscriptions for that position
+            var existingSubs = await _context.IntegrationSubscriptions
+                .Where(s =>
+                    s.Provider == "Outlook" &&
+                    s.UserId.ToString() == jwtUserId &&
+                    s.PositionId == position.Id)
+                .Select(s => s.LabelId)
+                .ToListAsync();
+
+            var subscribedIds = new HashSet<string>(existingSubs, StringComparer.OrdinalIgnoreCase);
+
+            // 5) Project into a simple DTO with Selected flag
+            var result = allFolders.Select(f => new
+            {
+                Id = f.Id,
+                Name = f.DisplayName,
+                // …any other fields you need…
+                Selected = subscribedIds.Contains(f.Id)
+            });
+
+            return Ok(result);
         }
 
         [HttpPost("subscribe-folders")]
@@ -583,6 +604,79 @@ namespace CVexplorer.Controllers
                 DeletedGraphSubscriptionIds = deleted,
                 DeletedLocalCount = localSubs.Count
             });
+        }
+
+
+        [HttpGet("graph-subscriptions")]
+        [Authorize(AuthenticationSchemes = $"{JwtBearerDefaults.AuthenticationScheme},MicrosoftCookie")]
+        public async Task<IActionResult> GetGraphSubscriptions()
+        {
+            // 1) Authenticate both JWT and the Microsoft cookie
+            var jwtResult = await HttpContext.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme);
+            var cookieResult = await HttpContext.AuthenticateAsync("MicrosoftCookie");
+            if (!jwtResult.Succeeded || !cookieResult.Succeeded)
+                return Forbid();
+
+            // 2) Ensure they’re the same user
+            var jwtUserId = jwtResult.Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var cookieUserId = cookieResult.Properties.Items["UserId"];
+            if (jwtUserId == null || cookieUserId == null || jwtUserId != cookieUserId)
+                return Forbid();
+
+            // 3) Get a fresh access token (will auto-refresh if needed)
+            var tokens = await CheckMsTokensAsync(jwtUserId);
+
+            // 4) Build a GraphServiceClient
+            var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider(req =>
+            {
+                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokens.AccessToken);
+                return Task.CompletedTask;
+            }));
+
+            // 5) Page through every subscription in Graph
+            var allSubs = new List<Subscription>();
+            var subPage = await graphClient.Subscriptions.Request().GetAsync();
+            allSubs.AddRange(subPage.CurrentPage);
+            while (subPage.NextPageRequest != null)
+            {
+                subPage = await subPage.NextPageRequest.GetAsync();
+                allSubs.AddRange(subPage.CurrentPage);
+            }
+
+            // 4) Fetch ALL mailFolders so we can resolve an ID → displayName map
+            var allFolders = new List<MailFolder>();
+            var folderPage = await graphClient.Me.MailFolders.Request().GetAsync();
+            allFolders.AddRange(folderPage.CurrentPage);
+            while (folderPage.NextPageRequest != null)
+            {
+                folderPage = await folderPage.NextPageRequest.GetAsync();
+                allFolders.AddRange(folderPage.CurrentPage);
+            }
+            var nameMap = allFolders.ToDictionary(f => f.Id!, f => f.DisplayName, StringComparer.OrdinalIgnoreCase);
+
+            // 5) Project each subscription and look up its folder name
+            var result = allSubs.Select(s =>
+            {
+                // Resource format is "me/mailFolders('{id}')/messages"
+                var folderId = Regex.Match(s.Resource ?? "", @"mailFolders\('(?<id>[^']+)'\)")
+                                    .Groups["id"].Value;
+
+                nameMap.TryGetValue(folderId, out var folderName);
+
+                return new
+                {
+                    s.Id,
+                    FolderId = folderId,
+                    FolderName = folderName ?? "(unknown)",
+                    s.Resource,
+                    s.ChangeType,
+                    s.NotificationUrl,
+                    s.ClientState,
+                    s.ExpirationDateTime
+                };
+            });
+
+            return Ok(result);
         }
 
 

@@ -124,7 +124,7 @@ namespace CVexplorer.Controllers
 
         [HttpGet("labels")]
         [Authorize(AuthenticationSchemes = $"{JwtBearerDefaults.AuthenticationScheme},{"GoogleCookie"}")]
-        public async Task<IActionResult> GetLabels()
+        public async Task<IActionResult> GetLabels(string publicPosId)
         {
             
             var jwtResult = await HttpContext.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme);
@@ -150,7 +150,24 @@ namespace CVexplorer.Controllers
                 ApplicationName = "CVexplorerWebClient"
             });
             var labels = await gmailService.Users.Labels.List("me").ExecuteAsync();
-            return Ok(labels.Labels);
+
+            var position = _context.Positions.First(p => p.PublicId == publicPosId);
+            var existingSubs = await _context.IntegrationSubscriptions
+       .Where(s => s.Provider == "Gmail" && s.UserId.ToString() == jwtUserId && s.PositionId == position.Id)
+       .ToListAsync();
+            var subscribedIds = existingSubs
+       .Select(s => s.LabelId)
+       .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var result = labels.Labels.Select(lbl => new
+            {
+                Id = lbl.Id,
+                Name = lbl.Name,
+                Selected = subscribedIds.Contains(lbl.Id)
+            });
+            //return Ok(labels.Labels);
+
+            return Ok(result);
 
         }
 
