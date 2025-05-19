@@ -31,7 +31,7 @@ namespace CVexplorer.Repositories.Implementation
                     RequiredSkills = position.Weights.RequiredSkills,
                     NiceToHave = position.Weights.NiceToHave,
                     Languages = position.Weights.Languages,
-                    Certification = position.Weights.Certification,
+                    Certifications = position.Weights.Certification,
                     Responsibilities = position.Weights.Responsibilities,
                     ExperienceMonths = position.Weights.ExperienceMonths,
                     Level = position.Weights.Level,
@@ -62,7 +62,7 @@ namespace CVexplorer.Repositories.Implementation
                     RequiredSkills = dto.Weights.RequiredSkills,
                     NiceToHave = dto.Weights.NiceToHave,
                     Languages = dto.Weights.Languages,
-                    Certification = dto.Weights.Certification,
+                    Certification = dto.Weights.Certifications,
                     Responsibilities = dto.Weights.Responsibilities,
                     ExperienceMonths = dto.Weights.ExperienceMonths,
                     Level = dto.Weights.Level,
@@ -90,7 +90,7 @@ namespace CVexplorer.Repositories.Implementation
                     RequiredSkills = position.Weights.RequiredSkills,
                     NiceToHave = position.Weights.NiceToHave,
                     Languages = position.Weights.Languages,
-                    Certification = position.Weights.Certification,
+                    Certifications = position.Weights.Certification,
                     Responsibilities = position.Weights.Responsibilities,
                     ExperienceMonths = position.Weights.ExperienceMonths,
                     Level = position.Weights.Level,
@@ -117,7 +117,7 @@ namespace CVexplorer.Repositories.Implementation
             position.Weights.RequiredSkills = dto.Weights.RequiredSkills;
             position.Weights.NiceToHave = dto.Weights.NiceToHave;
             position.Weights.Languages = dto.Weights.Languages;
-            position.Weights.Certification = dto.Weights.Certification;
+            position.Weights.Certification = dto.Weights.Certifications;
             position.Weights.Responsibilities = dto.Weights.Responsibilities;
             position.Weights.ExperienceMonths = dto.Weights.ExperienceMonths;
             position.Weights.Level = dto.Weights.Level;
