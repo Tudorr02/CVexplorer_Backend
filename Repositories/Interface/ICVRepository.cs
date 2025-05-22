@@ -13,6 +13,8 @@ namespace CVexplorer.Repositories.Interface
                                            string positionPublicId,
                                            int userId);
 
+        Task<bool> DeleteCVsAsync(List<Guid> cvPublicIds, string? positionPublicId = null, int? departmentId = null);
+
         Task<CvDTO> GetCVAsync(Guid publicId);
 
 

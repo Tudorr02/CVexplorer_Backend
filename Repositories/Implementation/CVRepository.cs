@@ -60,6 +60,40 @@ namespace CVexplorer.Repositories.Implementation
                 .ToListAsync();
         }
 
+        public async Task<bool> DeleteCVsAsync(List<Guid> cvPublicIds, string? positionPublicId = null, int? departmentId = null)
+        {
+            var query = _context.CVs.Include(cv => cv.RoundEntries).AsQueryable();
+
+            // If a positionPublicId was passed, filter by that position...
+            if (!string.IsNullOrWhiteSpace(positionPublicId))
+            {
+                // EF Core will translate the navigation property join for you,
+                // assuming Cv has a Position navigation property
+                query = query.Where(cv =>
+                    cv.Position.PublicId == positionPublicId);
+            }
+            // ...otherwise if a departmentId was passed, filter by department
+            else if (departmentId.HasValue)
+            {
+                query = query.Where(cv =>
+                    cv.Position.DepartmentId == departmentId.Value);
+            }
+
+            query = query.Where(cv => cvPublicIds.Contains(cv.PublicId));
+
+            var cvsToDelete = await query.ToListAsync();
+
+            // 5. Dacă nu există niciun CV de şters, returnăm false
+            if (!cvsToDelete.Any())
+                return false;
+
+            // 6. Ştergem şi salvăm modificările
+            _context.CVs.RemoveRange(cvsToDelete);
+            await _context.SaveChangesAsync();
+
+            return true;
+        }
+
         public async Task<bool> UploadDocumentAsync(IFormFile file, string positionPublicId, int userId , int? roundId = null)
         {
             var position = await _context.Positions.Include(p => p.Weights).FirstOrDefaultAsync(p => p.PublicId == positionPublicId)

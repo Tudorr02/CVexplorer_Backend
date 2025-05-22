@@ -141,33 +141,26 @@ namespace CVexplorer.Controllers
             return Ok(cv);
         }
 
-        //[HttpPost("extract-itext7")]
-        //public IActionResult ExtractTextWithIText7(IFormFile file)
-        //{
-        //    if (file is null || file.Length == 0)
-        //        return BadRequest("File is empty or null.");
 
-        //    var textBuilder = new StringBuilder();
+        [HttpDelete]
+        public async Task<IActionResult> DeleteCV(List<Guid> cvPublicIds, string? positionPublicId, int? departmentId = null)
+        {
+            if (departmentId == null && positionPublicId == null)
+                return Forbid();
 
-        //    // iText 7
-        //    using (var stream = file.OpenReadStream())               // nu e nevoie să‑l copiem în alt MemoryStream
-        //    using (var reader = new PdfReader(stream))
-        //    using (var pdfDoc = new PdfDocument(reader))
-        //    {
-        //        for (int page = 1; page <= pdfDoc.GetNumberOfPages(); page++)
-        //        {
-        //            var extractionStrategy = new LocationTextExtractionStrategy();
-        //            var pageText = PdfTextExtractor.GetTextFromPage(
-        //                               pdfDoc.GetPage(page),
-        //                               extractionStrategy);
-
-        //            textBuilder.AppendLine(pageText);
-        //        }
-        //    }
-
-        //    return Ok(textBuilder.ToString());
-        //}
-
+            if (positionPublicId != null)
+            {
+                if (!await IsUserAuthorizedAsync(positionPublicId))
+                    return Forbid();
+            }
+            else if (departmentId != null)
+            {
+                if (!await IsUserAuthorizedAsync(null, null, departmentId))
+                    return Forbid();
+            }
+            
+            return Ok(await _cvRepository.DeleteCVsAsync(cvPublicIds, positionPublicId, departmentId));
+        }
         
 
     }
