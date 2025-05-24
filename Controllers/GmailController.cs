@@ -35,7 +35,7 @@ namespace CVexplorer.Controllers
             return Challenge(props, GoogleDefaults.AuthenticationScheme);
         }
 
-        [HttpDelete("Disconnect")]
+        [HttpPost("Disconnect")]
         [Authorize(AuthenticationSchemes = $"{JwtBearerDefaults.AuthenticationScheme},{"GoogleCookie"}")]
         public async Task<IActionResult> Disconnect()
         {
@@ -103,18 +103,18 @@ namespace CVexplorer.Controllers
             var cookieResult = await HttpContext.AuthenticateAsync("GoogleCookie");
 
             if (!jwtResult.Succeeded || !cookieResult.Succeeded)
-                return Forbid();
+                return Forbid("GoogleCookie");
 
             var jwtUserId = jwtResult.Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var cookieUserId = cookieResult.Properties.Items["UserId"];
 
             if (jwtUserId == null || cookieUserId == null || jwtUserId != cookieUserId)
-                return Forbid();
+                return Forbid("GoogleCookie");
 
             var credential = await _gService.GetOrRefreshTokensAsync(jwtUserId);
 
             if (credential == null)
-                return Unauthorized("Tokens does not exist for current user");
+                return Forbid("GoogleCookie");
 
             return Ok();
         }
@@ -152,7 +152,7 @@ namespace CVexplorer.Controllers
             }
         }
 
-        [HttpDelete("Unsubscribe")]
+        [HttpPost("Unsubscribe")]
         [Authorize(AuthenticationSchemes = $"{JwtBearerDefaults.AuthenticationScheme},{"GoogleCookie"}")]
         
         public async Task<IActionResult> Unsubscribe(string publicPosId)

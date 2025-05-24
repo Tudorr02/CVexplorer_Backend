@@ -24,15 +24,30 @@ public class CvEvaluationService(HttpClient http, IMapper mapper) : ICvEvaluatio
             Converters = { new JsonStringEnumConverter() }
         };
 
-        using var response = await http.PostAsJsonAsync("/evaluate-cv", payload, opts, ct);
-        response.EnsureSuccessStatusCode();
+        try
+        {
 
-        var result = await response.Content.ReadFromJsonAsync<CvEvaluationResultDTO>(opts, ct);
+            using var response = await http.PostAsJsonAsync("/evaluate-cv", payload, opts, ct);
+            response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadFromJsonAsync<CvEvaluationResultDTO>(opts, ct);
+            if (result is null)
+                result = new CvEvaluationResultDTO();
 
-        if (result is null)
-            result = new CvEvaluationResultDTO();
+            return result;
 
-        return result;
+        }
+        catch (HttpRequestException ex)
+        {
+            var result = new CvEvaluationResultDTO
+            {
+                CandidateName = cvText.Substring(0, 10)
+            };
+
+            return result;
+        }
+
+
+       
     }
 
     public async Task<List<CvEvaluationResultDTO>> BulkEvaluateAsync(List<string> cvTexts, Position position, CancellationToken ct = default)

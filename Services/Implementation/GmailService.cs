@@ -358,11 +358,11 @@ namespace CVexplorer.Services.Implementation
 
                 if (!pdfFiles.Any())
                 {
-                    _logger.LogWarning("From: {From}, Subject: {Subject} — contains PDF", from, subject);
+                    
                     continue;
                 }
 
-                _logger.LogError("From: {From}, Subject: {Subject} — CONȚINE PDF", from, subject);
+                _logger.LogWarning("From: {From}, Subject: {Subject} — CONTAINS PDF", from, subject);
 
                 // 6. Obținem publicId-ul poziției o singură dată
                 var positionPublicId = await _context.Positions

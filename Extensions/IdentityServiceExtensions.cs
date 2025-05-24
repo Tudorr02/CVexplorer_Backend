@@ -13,6 +13,7 @@ using ProjectName.Data.Seeders;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.Identity.Web;
+using Microsoft.AspNetCore.CookiePolicy;
 
 namespace CVexplorer.Extensions
 {
@@ -89,6 +90,7 @@ namespace CVexplorer.Extensions
                     opts.Cookie.SameSite = SameSiteMode.None;
                     opts.Cookie.SecurePolicy = CookieSecurePolicy.Always;
                     opts.ExpireTimeSpan = TimeSpan.FromDays(1);
+
                 })
                 .AddCookie("MicrosoftCookie", opts =>
                 {
@@ -96,6 +98,7 @@ namespace CVexplorer.Extensions
                     opts.Cookie.SameSite = SameSiteMode.None;
                     opts.Cookie.SecurePolicy = CookieSecurePolicy.Always;
                     opts.ExpireTimeSpan = TimeSpan.FromDays(1);
+
                 })
                 .AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
                 {
