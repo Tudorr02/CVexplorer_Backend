@@ -185,68 +185,126 @@ namespace CVexplorer.Repositories.Implementation
         {
             var position = await _context.Positions
                             .Include(p => p.Weights)
+                            .AsNoTracking()
                            .FirstOrDefaultAsync(p => p.PublicId == positionPublicId)
                            ?? throw new ArgumentException("Position not found.");
 
-            using var stream = archiveFile.OpenReadStream();
-            using var archive = ArchiveFactory.Open(stream);
+            //await using var stream = archiveFile.OpenReadStream();
+            //using var archive = ArchiveFactory.Open(stream);
 
-            var pdfEntries = archive.Entries
-                                    .Where(e => !e.IsDirectory &&
-                                                e.Key.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-                                    .ToList();
+            //var pdfEntries = archive.Entries
+            //                        .Where(e => !e.IsDirectory &&
+            //                                    e.Key.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+            //                        .ToList();
 
-            if (pdfEntries.Count == 0)
-                throw new InvalidOperationException("Archive contains no PDF files.");
+            //if (pdfEntries.Count == 0)
+            //    throw new InvalidOperationException("Archive contains no PDF files.");
 
-            // 1️⃣  Extragem textele
-            var cvTexts = new List<string>(pdfEntries.Count);
-            var rawFiles = new List<(byte[] data, string fileName)>(pdfEntries.Count);
+            //var cvTexts = new List<string>(pdfEntries.Count);
+            //var rawFiles = new List<(byte[] data, string fileName)>(pdfEntries.Count);
 
-            foreach (var entry in pdfEntries)
+            //foreach (var entry in pdfEntries)
+            //{
+            //    using var ms = new MemoryStream();
+            //    entry.WriteTo(ms);
+            //    rawFiles.Add((ms.ToArray(), Path.GetFileName(entry.Key)));
+
+            //    ms.Position = 0;
+            //    cvTexts.Add(ExtractText(ms));
+            //}
+
+
+            //var evals = await _evaluation.CreateBulkAsync(cvTexts, position);
+
+            var (rawFiles, cvTexts) = await Task.Run(() =>
             {
-                using var ms = new MemoryStream();
-                entry.WriteTo(ms);
-                rawFiles.Add((ms.ToArray(), Path.GetFileName(entry.Key)));
+                using var stream = archiveFile.OpenReadStream();
+                using var archive = ArchiveFactory.Open(stream);
 
-                ms.Position = 0;
-                cvTexts.Add(ExtractText(ms));
-            }
+                var pdfEntries = archive.Entries
+                    .Where(e => !e.IsDirectory &&
+                               e.Key.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
 
-            // 2️⃣  Cerere batch către FastAPI
+                if (pdfEntries.Count == 0)
+                    throw new InvalidOperationException("Archive contains no PDF files.");
+
+                // Parallel processing of PDFs
+                var processed = pdfEntries
+                    .AsParallel() // Parallel LINQ
+                    .Select(entry =>
+                    {
+                        using var ms = new MemoryStream();
+                        entry.WriteTo(ms); // Synchronous write
+                        var data = ms.ToArray();
+                        var text = ExtractText(new MemoryStream(data));
+
+                        return (data, fileName: Path.GetFileName(entry.Key), text);
+                    })
+                    .ToList();
+
+                return (
+                    processed.Select(x => (x.data, x.fileName)).ToList(),
+                    processed.Select(x => x.text).ToList()
+                );
+            });
+
             var evals = await _evaluation.CreateBulkAsync(cvTexts, position);
 
-            // 3️⃣  Salvăm totul într‑un singur Round
             var round = await _roundRepository.CreateAsync(position.Id);
 
-            var cvsToAdd = new List<CV>();
+            //var cvsToAdd = new List<CV>();
 
-            for (int i = 0; i < rawFiles.Count; i++)
+            //for (int i = 0; i < rawFiles.Count; i++)
+            //{
+            //    var (data, fileName) = rawFiles[i];
+
+            //    var cv = new CV
+            //    {
+            //        PositionId = position.Id,
+            //        Position = position,
+            //        FileName = Path.GetFileNameWithoutExtension(fileName),
+            //        ContentType = "application/pdf",
+            //        Data = data,
+            //        UserUploadedById = userId,
+            //        Evaluation = evals[i] ,  // ordinea se păstrează
+            //        Score = CalculateScore(evals[i], position.Weights)
+            //    };
+
+            //    cvsToAdd.Add(cv);
+            //    _context.CVs.Add(cv);
+
+            //}
+
+            //await _context.SaveChangesAsync();
+
+
+            //foreach (var cv in cvsToAdd)
+            //    await _rEntryRepository.CreateAsync(round.Id, cv.Id);
+
+            var cvsToAdd = rawFiles.Select((file, index) => new CV
             {
-                var (data, fileName) = rawFiles[i];
+                PositionId = position.Id,
+                FileName = Path.GetFileNameWithoutExtension(file.fileName),
+                ContentType = "application/pdf",
+                Data = file.data,
+                UserUploadedById = userId,
+                Evaluation = evals[index],
+                Score = CalculateScore(evals[index], position.Weights)
+            }).ToList();
 
-                var cv = new CV
-                {
-                    PositionId = position.Id,
-                    Position = position,
-                    FileName = Path.GetFileNameWithoutExtension(fileName),
-                    ContentType = "application/pdf",
-                    Data = data,
-                    UserUploadedById = userId,
-                    Evaluation = evals[i] ,  // ordinea se păstrează
-                    Score = CalculateScore(evals[i], position.Weights)
-                };
+            // 6. Bulk database operations (async)
+            await _context.AddRangeAsync(cvsToAdd);
 
-                cvsToAdd.Add(cv);
-                _context.CVs.Add(cv);
-                
-            }
+            // 7. Bulk round entries (async)
+            var roundEntries = cvsToAdd.Select(cv => new RoundEntry
+            {
+                RoundId = round.Id,
+                CvId = cv.Id
+            }).ToList();
+            
 
-            await _context.SaveChangesAsync();
-
-            // Apoi salvăm în RoundEntry
-            foreach (var cv in cvsToAdd)
-                await _rEntryRepository.CreateAsync(round.Id, cv.Id);
+            await _context.BulkInsertAsync(roundEntries);
 
             return true;
         }

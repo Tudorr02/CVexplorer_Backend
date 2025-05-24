@@ -82,7 +82,6 @@ namespace CVexplorer.Controllers
         }
 
         [HttpPost("/api/Positions/{positionPublicId}/CVs")]
-       // [Consumes("multipart/form-data")]
         public async Task<IActionResult> UploadCVs(string positionPublicId,[FromForm] IFormFile file)
         {
             if (!await IsUserAuthorizedAsync(positionPublicId))
@@ -98,7 +97,7 @@ namespace CVexplorer.Controllers
             return extension switch
             {
                 ".pdf" => Ok(await _cvRepository.UploadDocumentAsync(file, positionPublicId, userId)),
-                ".rar" => Ok(await _cvRepository.UploadArchiveAsync(file, positionPublicId, userId)),
+                ".rar" => Ok(await _cvRepository.UploadBulkArchiveAsync(file, positionPublicId, userId)),
                 ".zip" => Ok(await _cvRepository.UploadBulkArchiveAsync(file, positionPublicId, userId)),
                 _ => BadRequest("Unsupported file type. Only .pdf, .zip, and .rar are allowed.")
             };

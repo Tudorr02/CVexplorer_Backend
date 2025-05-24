@@ -17,54 +17,6 @@ namespace CVexplorer.Repositories.Implementation
             CvEvaluationResultDTO evalDto = await _evaluator.EvaluateAsync(cvText, position).ConfigureAwait(false);
 
             return Map(evalDto);
-            //return new CvEvaluationResult
-            //{
-
-            //    CandidateName = evalDto.CandidateName,
-
-            //    RequiredSkills = new CvScoreScrapedField<List<string>>
-            //    {
-            //        Scraped = evalDto.RequiredSkills.Scraped.ToList(),
-            //        Score = evalDto.RequiredSkills.Score
-            //    },
-            //    NiceToHave = new CvScoreScrapedField<List<string>>
-            //    {
-            //        Scraped = evalDto.NiceToHave.Scraped.ToList(),
-            //        Score = evalDto.NiceToHave.Score
-            //    },
-            //    Certifications = new CvScoreScrapedField<List<string>>
-            //    {
-            //        Scraped = evalDto.Certifications.Scraped.ToList(),
-            //        Score = evalDto.Certifications.Score
-            //    },
-            //    Responsibilities = new CvScoreScrapedField<List<string>>
-            //    {
-            //        Scraped = evalDto.Responsibilities.Scraped.ToList(),
-            //        Score = evalDto.Responsibilities.Score
-            //    },
-
-            //    Languages = new CvScoreValueField<List<string>>
-            //    {
-            //        Value = evalDto.Languages.Value.ToList(),
-            //        Score = evalDto.Languages.Score
-            //    },
-            //    MinimumExperienceMonths = new CvScoreValueField<double>
-            //    {
-            //        Value = evalDto.MinimumExperienceMonths.Value,
-            //        Score = evalDto.MinimumExperienceMonths.Score
-            //    },
-            //    Level = new CvScoreValueField<PositionLevel>
-            //    {
-            //        Value = evalDto.Level.Value,
-            //        Score = evalDto.Level.Score
-            //    },
-            //    MinimumEducationLevel = new CvScoreValueField<EducationLevel>
-            //    {
-            //        Value = evalDto.MinimumEducationLevel.Value,
-            //        Score = evalDto.MinimumEducationLevel.Score
-            //    }
-            //};
-        
             
         }
 
@@ -127,12 +79,11 @@ namespace CVexplorer.Repositories.Implementation
 
         public async Task<IReadOnlyList<CvEvaluationResult>> CreateBulkAsync(List<string> cvTexts,Position position)
         {
-            // 1️⃣  Cerere unică la FastAPI prin serviciul de evaluare
             var evalDtos = await _evaluator
                 .BulkEvaluateAsync(cvTexts, position)
                 .ConfigureAwait(false);
 
-            // 2️⃣  Mapăm fiecare DTO în domeniul nostru
+           
             var results = new List<CvEvaluationResult>(evalDtos.Count);
 
             foreach (var dto in evalDtos)
@@ -141,7 +92,6 @@ namespace CVexplorer.Repositories.Implementation
             return results;
         }
 
-        /* helper reutilizat și de metoda CreateAsync pentru a evita duplicarea codului */
         private static CvEvaluationResult Map(CvEvaluationResultDTO dto) => new()
         {
             CandidateName = dto.CandidateName,
