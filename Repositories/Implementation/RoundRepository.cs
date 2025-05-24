@@ -27,7 +27,6 @@ namespace CVexplorer.Repositories.Implementation
 
         public async Task<IEnumerable<RoundListDTO>> ListAsync(int? departmentId = null, string? publicPositionId = null)
         {
-            // start from all rounds, include Position so we can filter by department
             var rounds = _context.Rounds
                 .Include(r => r.Position)
                 .ThenInclude(p => p.Department)
@@ -54,7 +53,6 @@ namespace CVexplorer.Repositories.Implementation
                 {
                     PublicId = r.PublicId,
                     Name = r.Name,
-                    // … copy over any other Round properties you need …
                     CreatedAt = r.CreatedAt,
                     CandidatesNumber = r.RoundEntries.Count
                 })

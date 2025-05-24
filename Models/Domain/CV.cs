@@ -8,7 +8,7 @@ namespace CVexplorer.Models.Domain
 
         public Guid PublicId { get; set; } = Guid.NewGuid();
 
-        public required Position Position { get; set; }
+        public Position Position { get; set; }
         public required Guid PositionId { get; set; }
         public  string? FileName { get; set; }
         public required string ContentType { get; set; }

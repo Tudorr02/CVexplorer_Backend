@@ -16,45 +16,40 @@ namespace CVexplorer.Services.Implementation
     public class PushBackgroundService : BackgroundService
     {
         private readonly IBackgroundTaskQueue _queue;
-        private readonly IServiceProvider _sp;
         private ILogger<PushBackgroundService> _logger;
+        private readonly IServiceProvider _sp;
 
         public PushBackgroundService(IBackgroundTaskQueue queue, IServiceProvider sp, ILogger<PushBackgroundService> logger)
         {
             _queue = queue;
-            _sp = sp;
             _logger = logger;
+            _sp = sp; 
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("GmailPushBackgroundService running…");
 
             await foreach (var job in _queue.DequeueAllAsync(stoppingToken))
             {
-                // fiecare job are EmailAddress și StartHistoryId
-                // creăm un scope ca să rezolvăm DbContext, UserManager etc.
                 
                 try
                 {
-                    using var scope = _sp.CreateScope();
 
+                    using var scope = _sp.CreateScope();
                     if (job.Provider == "Gmail")
                     {
-                        var gmailController = scope.ServiceProvider
-                                                 .GetRequiredService<GmailController>();
-                        // job.JobId conține IntegrationSubscription.Id
+                        var gService = scope.ServiceProvider.GetRequiredService<IGmailService>();
                         var subscriptionId = long.Parse(job.SubscriptionId);
-                        await gmailController.ProcessHistoryAsync(subscriptionId, stoppingToken);
+                        await gService.ProcessHistoryAsync(subscriptionId, stoppingToken);
                     }
                     else if (job.Provider == "Outlook")
                     {
-                        var outlookController = scope.ServiceProvider
-                                                     .GetRequiredService<OutlookController>();
-                        await outlookController.ProcessNewMessageAsync(
-                            job.MessageId,
-                            job.ResourceId
-                        );
+                        //var outlookController = scope.ServiceProvider
+                        //                             .GetRequiredService<OutlookController>();
+                        //await outlookController.ProcessNewMessageAsync(
+                        //    job.MessageId,
+                        //    job.ResourceId
+                        //);
                     }
                     else
                     {

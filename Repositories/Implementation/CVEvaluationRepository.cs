@@ -15,8 +15,11 @@ namespace CVexplorer.Repositories.Implementation
         public async Task<CvEvaluationResult> CreateAsync(string cvText, Position position)
         {
             CvEvaluationResultDTO evalDto = await _evaluator.EvaluateAsync(cvText, position).ConfigureAwait(false);
+            var evaluation = Map(evalDto);
 
-            return Map(evalDto);
+            await _context.CvEvaluationResults.AddAsync(evaluation);
+            await _context.SaveChangesAsync();
+            return evaluation;
             
         }
 
@@ -60,8 +63,6 @@ namespace CVexplorer.Repositories.Implementation
             _context.CvEvaluationResults.Update(eval);
             await _context.SaveChangesAsync();
 
-
-            // Return updated DTO
             return new CvEvaluationResultDTO
             {
                 CandidateName = eval.CandidateName,
@@ -83,13 +84,11 @@ namespace CVexplorer.Repositories.Implementation
                 .BulkEvaluateAsync(cvTexts, position)
                 .ConfigureAwait(false);
 
-           
-            var results = new List<CvEvaluationResult>(evalDtos.Count);
 
-            foreach (var dto in evalDtos)
-                results.Add(Map(dto));
-
-            return results;
+            var evaluations = evalDtos.Select(dto => Map(dto)).ToList();
+            await _context.CvEvaluationResults.AddRangeAsync(evaluations);
+            await _context.SaveChangesAsync();
+            return evaluations;
         }
 
         private static CvEvaluationResult Map(CvEvaluationResultDTO dto) => new()

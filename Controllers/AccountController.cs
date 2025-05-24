@@ -1,12 +1,7 @@
 ﻿using AutoMapper;
 using CVexplorer.Models.Domain;
 using CVexplorer.Models.DTO;
-using CVexplorer.Repositories.Implementation;
 using CVexplorer.Repositories.Interface;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.Google;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;

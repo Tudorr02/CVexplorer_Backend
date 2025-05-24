@@ -58,7 +58,6 @@ namespace CVexplorer.Extensions
                     };
                     options.Events = new JwtBearerEvents
                     {
-                        // ❶ Încarcă token-ul din cookie "jwt" dacă există
                         OnMessageReceived = context =>
                         {
                             if (context.Request.Cookies.TryGetValue("jwt", out var jwt))
@@ -70,7 +69,6 @@ namespace CVexplorer.Extensions
 
                         },
 
-                        // ❷ Verifică dacă token-ul a expirat
                         OnAuthenticationFailed = context =>
                         {
                             if (context.Exception is SecurityTokenExpiredException)
@@ -192,7 +190,6 @@ namespace CVexplorer.Extensions
                         options.CallbackPath = configuration["Microsoft:AzureAd:CallbackPath"];
 
                         options.TokenValidationParameters.ValidateIssuer = false;
-                        // PKCE + code flow recomandat
                         options.ResponseType = OpenIdConnectResponseType.Code;
                         options.UsePkce = true;
                         options.SaveTokens = false;
@@ -202,8 +199,8 @@ namespace CVexplorer.Extensions
                         options.Scope.Add("User.Read");
                         options.Scope.Add("Mail.Read");
                         options.Scope.Add("offline_access");
-                        options.Scope.Add("openid");           //  ← obligatoriu
-                        options.Scope.Add("profile");          //  ← util pt. nume/email
+                        options.Scope.Add("openid");           
+                        options.Scope.Add("profile");          
 
                         options.Scope.Add("Mail.Send");
 

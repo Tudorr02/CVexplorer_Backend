@@ -87,9 +87,10 @@ namespace CVexplorer.Repositories.Implementation
 
         public async Task CreateAsync (int roundId , int cvId)
         {
-            var entry = new RoundEntry { RoundId = roundId, CvId = cvId };
-            _context.RoundEntries.Add(entry);
+            _context.RoundEntries.Add( new RoundEntry { RoundId = roundId, CvId = cvId });
             await _context.SaveChangesAsync();
         }
+
+        
     }
 }
