@@ -32,6 +32,7 @@ namespace CVexplorer.Controllers
             var props = new AuthenticationProperties();
             props.Items["UserId"] = userId;
             props.RedirectUri = _config["Google:RedirectUri"];
+
             return Challenge(props, GoogleDefaults.AuthenticationScheme);
         }
 
@@ -101,22 +102,23 @@ namespace CVexplorer.Controllers
         {
             var jwtResult = await HttpContext.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme);
             var cookieResult = await HttpContext.AuthenticateAsync("GoogleCookie");
-
+            var sessionActive = false;
             if (!jwtResult.Succeeded || !cookieResult.Succeeded)
-                return Forbid("GoogleCookie");
+                return Ok(new { sessionActive });
 
             var jwtUserId = jwtResult.Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var cookieUserId = cookieResult.Properties.Items["UserId"];
 
             if (jwtUserId == null || cookieUserId == null || jwtUserId != cookieUserId)
-                return Forbid("GoogleCookie");
+                return Ok(new { sessionActive });
 
             var credential = await _gService.GetOrRefreshTokensAsync(jwtUserId);
 
             if (credential == null)
-                return Forbid("GoogleCookie");
+                return Ok(new { sessionActive });
 
-            return Ok();
+            sessionActive = true;
+            return Ok( new {sessionActive});
         }
 
 
@@ -140,7 +142,7 @@ namespace CVexplorer.Controllers
             var credential = await _gService.GetOrRefreshTokensAsync(jwtUserId);
 
             if (credential == null)
-                return Unauthorized("Tokens does not exist for current user");
+                return Forbid("GoogleCookie");
 
             try
             {
@@ -172,7 +174,7 @@ namespace CVexplorer.Controllers
             var credential = await _gService.GetOrRefreshTokensAsync(jwtUserId);
 
             if (credential == null)
-                return Unauthorized("Tokens does not exist for current user");
+                return Forbid("GoogleCookie");
 
             try
             {

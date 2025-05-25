@@ -187,10 +187,11 @@ namespace CVexplorer.Extensions
                 .AddOpenIdConnect("Microsoft",
                     options =>
                     {
+                        
                         options.Authority = $"{configuration["Microsoft:AzureAd:Instance"]}{configuration["Microsoft:AzureAd:TenantId"]}/v2.0";
                         options.ClientId = configuration["Microsoft:AzureAd:ClientId"];
                         options.ClientSecret = configuration["Microsoft:AzureAd:ClientSecret"];
-                        options.CallbackPath = configuration["Microsoft:AzureAd:CallbackPath"];
+                        //options.CallbackPath = configuration["Microsoft:AzureAd:CallbackPath"];
 
                         options.TokenValidationParameters.ValidateIssuer = false;
                         options.ResponseType = OpenIdConnectResponseType.Code;
@@ -209,6 +210,12 @@ namespace CVexplorer.Extensions
 
                         options.Events = new OpenIdConnectEvents
                         {
+                            OnRedirectToIdentityProvider = context =>
+                            {
+                                context.ProtocolMessage.Prompt = "consent";
+                                return Task.CompletedTask;
+
+                            },
                             OnTokenValidated = async ctx =>
                             {
                                 if (!ctx.Properties.Items.TryGetValue("UserId", out var localUserId))
@@ -243,6 +250,24 @@ namespace CVexplorer.Extensions
                                     await userManager.SetAuthenticationTokenAsync(
                                         user, "Microsoft", "expires_at", expiresAt);
                                 }
+                            },
+
+                            OnTicketReceived = async ctx =>
+                            {
+                                // semnează cookie-ul în scheme-ul MicrosoftCookie
+                                // (dacă nu ai deja făcut-o automat de middleware)
+                                await ctx.HttpContext.SignInAsync(
+                                    "MicrosoftCookie",
+                                    ctx.Principal,
+                                    ctx.Properties);
+
+                                // 3) Redirectezi unde vrei
+                                var redirectUri = ctx.ReturnUri ?? "/";
+                                ctx.HttpContext.Response.Redirect(redirectUri);
+
+                                // 4) Blochezi pipeline-ul implicit ca să nu fie dublă redirecționare
+                                ctx.HandleResponse();
+
                             }
                         };
                     });

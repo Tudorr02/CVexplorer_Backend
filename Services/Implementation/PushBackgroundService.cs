@@ -44,12 +44,13 @@ namespace CVexplorer.Services.Implementation
                     }
                     else if (job.Provider == "Outlook")
                     {
-                        //var outlookController = scope.ServiceProvider
-                        //                             .GetRequiredService<OutlookController>();
-                        //await outlookController.ProcessNewMessageAsync(
-                        //    job.MessageId,
-                        //    job.ResourceId
-                        //);
+                        var oService = scope.ServiceProvider.GetRequiredService<IOutlookService>();
+                        var subscriptionId = long.Parse(job.SubscriptionId);
+                        await oService.ProcessNewMessageAsync(
+                            job.MessageId,
+                            job.ResourceId,
+                            subscriptionId
+                        );
                     }
                     else
                     {
