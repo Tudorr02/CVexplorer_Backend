@@ -16,7 +16,6 @@ namespace CVexplorer.Controllers
     {
         private async Task<bool> IsUserAuthorizedAsync(int entryId)
         {
-            // 1) Load the current user + their department‐accesses
             var userId = _userManager.GetUserId(User);
             if (string.IsNullOrEmpty(userId))
                 return false;
@@ -32,7 +31,8 @@ namespace CVexplorer.Controllers
                 .Where(re => re.Id == entryId)
                 .Select(re => re.RoundId)
                 .FirstOrDefaultAsync();
-            // 2) Load the round → position → department → company
+           
+
             var round = await _context.Rounds
                 .Include(r => r.Position)
                   .ThenInclude(p => p.Department)
@@ -45,7 +45,7 @@ namespace CVexplorer.Controllers
             if (department.CompanyId != user.CompanyId)
                 return false;
 
-            // 3) If they’re in HRUser role, verify dept‐access
+            
             if (User.IsInRole("HRUser"))
             {
                 bool hasAccess = user.UserDepartmentAccesses
@@ -55,7 +55,6 @@ namespace CVexplorer.Controllers
                     return false;
             }
 
-            // passed all checks!
             return true;
         }
 

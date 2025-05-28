@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CVexplorer.Repositories.Implementation
 {
-    public class RoundEntryRepository(DataContext _context) : IRoundEntryRepository
+    public class RoundEntryRepository(DataContext _context, IPositionRepository _posRepository) : IRoundEntryRepository
     {
         public async Task<IEnumerable<RoundEntryListDTO>> GetAllAsync(string roundId)
         {
@@ -31,6 +31,8 @@ namespace CVexplorer.Repositories.Implementation
             var rEntry = await _context.RoundEntries
                 .Include(re => re.Cv)
                 .ThenInclude(cv => cv.Evaluation)
+                .Include(re => re.Round)
+                .ThenInclude(r => r.Position)
                 .FirstOrDefaultAsync(re => re.Id == reId);
 
             return new CvEvaluationDTO
@@ -81,7 +83,8 @@ namespace CVexplorer.Repositories.Implementation
                         Value = rEntry.Cv.Evaluation.MinimumEducationLevel.Value,
                         Score = rEntry.Cv.Evaluation.MinimumEducationLevel.Score
                     }
-                }
+                },
+                PositionData = _posRepository.GetPositionAsync(rEntry.Round.Position.PublicId).Result
             };
         }
 
