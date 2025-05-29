@@ -23,6 +23,7 @@ namespace CVexplorer.Repositories.Implementation
                        Score = Convert.ToInt16(re.Cv.Score),
                        Selected = re.Selected
                    })
+                   .OrderByDescending(r=>r.Score)
                    .ToListAsync();
         }
 
@@ -94,6 +95,16 @@ namespace CVexplorer.Repositories.Implementation
             await _context.SaveChangesAsync();
         }
 
-        
+        public async Task<bool> UpdateAsync(int reId, bool selected)
+        {
+            var roundEntry = await _context.RoundEntries.FindAsync(reId);
+            if (roundEntry == null) return false;
+            roundEntry.Selected = selected;
+            _context.RoundEntries.Update(roundEntry);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+
     }
 }

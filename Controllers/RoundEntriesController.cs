@@ -12,7 +12,7 @@ namespace CVexplorer.Controllers
     [Authorize(Policy = "RequireHRUserRole")]
     [ApiController]
     [Route("api/[controller]")]
-    public class RoundEntriesController(DataContext _context, IRoundEntryRepository _rEntryRepo , UserManager<User> _userManager) : Controller
+    public class RoundEntriesController(DataContext _context, IRoundEntryRepository _rEntryRepo, UserManager<User> _userManager) : Controller
     {
         private async Task<bool> IsUserAuthorizedAsync(int entryId)
         {
@@ -31,7 +31,7 @@ namespace CVexplorer.Controllers
                 .Where(re => re.Id == entryId)
                 .Select(re => re.RoundId)
                 .FirstOrDefaultAsync();
-           
+
 
             var round = await _context.Rounds
                 .Include(r => r.Position)
@@ -45,7 +45,7 @@ namespace CVexplorer.Controllers
             if (department.CompanyId != user.CompanyId)
                 return false;
 
-            
+
             if (User.IsInRole("HRUser"))
             {
                 bool hasAccess = user.UserDepartmentAccesses
@@ -69,6 +69,25 @@ namespace CVexplorer.Controllers
             return Ok(dto);
         }
 
-       
+        [HttpPut("{entryId}")]
+        public async Task<IActionResult> UpdateRoundEntry(int entryId, bool selected)
+        {
+            if (!await IsUserAuthorizedAsync(entryId))
+                return Forbid();
+
+            try
+            {
+                var updatedEntry = await _rEntryRepo.UpdateAsync(entryId, selected);
+                if (updatedEntry == null)
+                    return NotFound();
+                return Ok(updatedEntry);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"An error occurred while updating the round entry: {ex.Message}");
+            }
+
+
+        }
     }
 }

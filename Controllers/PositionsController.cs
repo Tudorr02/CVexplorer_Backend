@@ -43,8 +43,7 @@ namespace CVexplorer.Controllers
             }
             else
             {
-                department = await _context.Departments
-                    .FirstOrDefaultAsync(d => d.Id == departmentId);
+                department = await _context.Departments.FirstOrDefaultAsync(d => d.Id == departmentId);
 
             }
 
@@ -88,7 +87,7 @@ namespace CVexplorer.Controllers
         }
 
         [HttpPut("{publicId}")]
-        public async Task<ActionResult<PositionDTO>> UpdatePosition(string publicId, [FromBody] PositionDTO dto)
+        public async Task<IActionResult> UpdatePosition(string publicId, [FromBody] PositionDTO dto)
         {
             if (!await IsUserAuthorizedAsync(publicId))
                 return Forbid();

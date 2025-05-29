@@ -77,25 +77,25 @@ namespace CVexplorer.Repositories.Implementation
             {
                 PublicId = position.PublicId,
                 Name = position.Name,
-                RequiredSkills = position.RequiredSkills,
-                NiceToHave = position.NiceToHave,
-                Languages = position.Languages,
-                Certifications = position.Certification,
-                Responsibilities = position.Responsibilities,
-                MinimumExperienceMonths = position.MinimumExperienceMonths,
-                Level = position.Level,
-                MinimumEducationLevel = position.MinimumEducationLevel,
-                Weights = new ScoreWeightsDTO
-                {
-                    RequiredSkills = position.Weights.RequiredSkills,
-                    NiceToHave = position.Weights.NiceToHave,
-                    Languages = position.Weights.Languages,
-                    Certifications = position.Weights.Certification,
-                    Responsibilities = position.Weights.Responsibilities,
-                    ExperienceMonths = position.Weights.ExperienceMonths,
-                    Level = position.Weights.Level,
-                    MinimumEducation = position.Weights.MinimumEducation
-                }
+                //RequiredSkills = position.RequiredSkills,
+                //NiceToHave = position.NiceToHave,
+                //Languages = position.Languages,
+                //Certifications = position.Certification,
+                //Responsibilities = position.Responsibilities,
+                //MinimumExperienceMonths = position.MinimumExperienceMonths,
+                //Level = position.Level,
+                //MinimumEducationLevel = position.MinimumEducationLevel,
+                //Weights = new ScoreWeightsDTO
+                //{
+                //    RequiredSkills = position.Weights.RequiredSkills,
+                //    NiceToHave = position.Weights.NiceToHave,
+                //    Languages = position.Weights.Languages,
+                //    Certifications = position.Weights.Certification,
+                //    Responsibilities = position.Weights.Responsibilities,
+                //    ExperienceMonths = position.Weights.ExperienceMonths,
+                //    Level = position.Weights.Level,
+                //    MinimumEducation = position.Weights.MinimumEducation
+                //}
             };
         }
 
@@ -137,5 +137,7 @@ namespace CVexplorer.Repositories.Implementation
             await _context.SaveChangesAsync();
             return true;
         }
+
+
     }
 }

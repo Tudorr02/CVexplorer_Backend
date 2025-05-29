@@ -9,5 +9,6 @@ namespace CVexplorer.Repositories.Interface
         Task<CvEvaluationDTO> GetRoundEntryAsync(int reId);
 
         Task CreateAsync(int roundId , int cvId );
+        Task<bool> UpdateAsync(int reId, bool selected);
     }
 }

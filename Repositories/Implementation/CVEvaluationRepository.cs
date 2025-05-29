@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CVexplorer.Repositories.Implementation
 {
-    public class CVEvaluationRepository(DataContext _context , ICvEvaluationService _evaluator) : ICVEvaluationRepository
+    public class CVEvaluationRepository(DataContext _context , ICvEvaluationService _evaluator ) : ICVEvaluationRepository
     {
         public async Task<CvEvaluationResult> CreateAsync(string cvText, Position position)
         {
@@ -27,6 +27,7 @@ namespace CVexplorer.Repositories.Implementation
         {
             var cv = await _context.CVs
                 .Include(c => c.Evaluation)
+                .Include(cv => cv.Position)
                 .FirstOrDefaultAsync(c => c.PublicId == cvPublicId);
 
             var eval = cv.Evaluation;
@@ -61,6 +62,8 @@ namespace CVexplorer.Repositories.Implementation
             eval.MinimumEducationLevel.Score = editDto.MinimumEducationLevel.Score;
 
             _context.CvEvaluationResults.Update(eval);
+
+            cv.Score =  CalculateScore(eval, cv.Position.Weights);
             await _context.SaveChangesAsync();
 
             return new CvEvaluationResultDTO
@@ -137,6 +140,19 @@ namespace CVexplorer.Repositories.Implementation
                 Score = dto.MinimumEducationLevel.Score
             }
         };
+
+        private double CalculateScore(CvEvaluationResult eval, ScoreWeights weights)
+        {
+            return Math.Round(
+            ((weights.RequiredSkills / 100) * eval.RequiredSkills.Score +
+            (weights.NiceToHave / 100) * eval.NiceToHave.Score +
+            (weights.Languages / 100) * eval.Languages.Score +
+            (weights.Certification / 100) * eval.Certifications.Score +
+            (weights.Responsibilities / 100) * eval.Responsibilities.Score +
+            (weights.ExperienceMonths / 100) * eval.MinimumExperienceMonths.Score +
+            (weights.Level / 100) * eval.Level.Score +
+            (weights.MinimumEducation / 100) * eval.MinimumEducationLevel.Score), 0, MidpointRounding.AwayFromZero);
+        }
 
     }
 }

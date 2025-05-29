@@ -219,17 +219,17 @@ namespace CVexplorer.Repositories.Implementation
             return sb.ToString();
         }
 
-        private double CalculateScore(CvEvaluationResult eval , ScoreWeights weights)
+        public double CalculateScore(CvEvaluationResult eval , ScoreWeights weights)
         {
-            return
-            weights.RequiredSkills * eval.RequiredSkills.Score +
-            weights.NiceToHave * eval.NiceToHave.Score +
-            weights.Languages * eval.Languages.Score +
-            weights.Certification * eval.Certifications.Score +
-            weights.Responsibilities * eval.Responsibilities.Score +
-            weights.ExperienceMonths * eval.MinimumExperienceMonths.Score +
-            weights.Level * eval.Level.Score +
-            weights.MinimumEducation * eval.MinimumEducationLevel.Score;
+            return Math.Round(
+            ((weights.RequiredSkills/100) * eval.RequiredSkills.Score +
+            (weights.NiceToHave / 100) * eval.NiceToHave.Score +
+            (weights.Languages /100) * eval.Languages.Score +
+            (weights.Certification /100) * eval.Certifications.Score +
+            (weights.Responsibilities/100) * eval.Responsibilities.Score +
+            (weights.ExperienceMonths/100) * eval.MinimumExperienceMonths.Score +
+            (weights.Level /100) * eval.Level.Score +
+            (weights.MinimumEducation/100) * eval.MinimumEducationLevel.Score ), 0, MidpointRounding.AwayFromZero);
         }
 
 
