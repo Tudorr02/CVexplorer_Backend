@@ -15,6 +15,7 @@ using Google.Apis.Gmail.v1;
 using CVexplorer.Repositories.Implementation;
 using CVexplorer.Controllers;
 using Azure;
+using System;
 
 namespace CVexplorer.Services.Implementation
 {
@@ -342,6 +343,8 @@ namespace CVexplorer.Services.Implementation
                 .ToList()
               ?? new List<string>();
 
+            int processedCVs = 0;
+
             foreach (var msgId in messageIds)
             {
                 var msgReq = gmail.Users.Messages.Get("me", msgId);
@@ -374,16 +377,52 @@ namespace CVexplorer.Services.Implementation
                 foreach (var file in pdfFiles)
                 {
                     await _cvRepository.UploadDocumentAsync(file, positionPublicId, sub.User.Id, sub.RoundId);
+                    processedCVs++;
                 }
             }
 
 
-
+            sub.ProcessedCVs += processedCVs;
             sub.SyncToken = history.HistoryId.ToString();
             sub.UpdatedAt = DateTimeOffset.UtcNow;
             await _context.SaveChangesAsync(ct);
         }
 
+        public async Task<GmailSessionDTO> GetSessionDataAsync (string userId , string? publicId = null)
+        {
+            var user = await _userManager.FindByIdAsync(userId)
+                       ?? throw new Exception("User does not exist");
+
+        
+            var expiresAtStr = await _userManager.GetAuthenticationTokenAsync(
+                                   user, GoogleDefaults.AuthenticationScheme, "expires_at");
+
+            string? expiry = null;
+            if (long.TryParse(expiresAtStr, out var unix))
+            {
+                var dto = DateTimeOffset.FromUnixTimeSeconds(unix);
+                // obținem stringul ISO 8601, ex: "2025-05-30T14:23:45.0000000Z"
+                expiry = dto.ToUniversalTime().ToString("o");
+            }
+
+            
+
+
+            var position = await _context.Positions
+                .SingleOrDefaultAsync(p => p.PublicId == publicId)
+                ?? throw new Exception("Position does not exist");
+
+            var existingSub = await _context.IntegrationSubscriptions.FirstOrDefaultAsync(s =>
+                s.UserId == user.Id && s.Provider == "Gmail" && s.PositionId == position.Id);
+
+
+            return new GmailSessionDTO
+            {
+                ProcessedCVs = existingSub?.ProcessedCVs ?? 0,
+                Expiry = expiry
+            };
+
+        }
         public async Task Disconnect ( string userId)
         {
             var user = await _userManager.FindByIdAsync(userId)

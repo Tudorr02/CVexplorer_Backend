@@ -21,6 +21,8 @@
         public required int RoundId { get; set; }    // FK către Round
         public Round Round { get; set; }    // FK către Round
 
+        public int ProcessedCVs { get; set; } = 0;    // numărul de CV-uri procesate
+
     }
 
 }

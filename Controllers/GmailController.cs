@@ -98,7 +98,7 @@ namespace CVexplorer.Controllers
 
         [HttpGet("Session")]
         [Authorize(AuthenticationSchemes = $"{JwtBearerDefaults.AuthenticationScheme},{"GoogleCookie"}")]
-        public async Task<IActionResult> Session()
+        public async Task<IActionResult> Session(string ? publicId = null)
         {
             var jwtResult = await HttpContext.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme);
             var cookieResult = await HttpContext.AuthenticateAsync("GoogleCookie");
@@ -117,8 +117,10 @@ namespace CVexplorer.Controllers
             if (credential == null)
                 return Ok(new { sessionActive });
 
+            var data = await _gService.GetSessionDataAsync(jwtUserId, publicId);
+
             sessionActive = true;
-            return Ok( new {sessionActive});
+            return Ok( new {sessionActive , data });
         }
 
 
@@ -143,7 +145,7 @@ namespace CVexplorer.Controllers
 
             if (credential == null)
                 return Forbid("GoogleCookie");
-
+            
             try
             {
                 return await _gService.WatchLabels(credential,labelIds, positionPublicId, jwtUserId);

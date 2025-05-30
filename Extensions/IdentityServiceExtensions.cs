@@ -14,6 +14,7 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.Identity.Web;
 using Microsoft.AspNetCore.CookiePolicy;
+using System.Text.Json;
 
 namespace CVexplorer.Extensions
 {
@@ -38,7 +39,7 @@ namespace CVexplorer.Extensions
 
 
 
-            services.AddAuthentication(options =>
+            _ = services.AddAuthentication(options =>
                 {
                     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 })
@@ -127,7 +128,7 @@ namespace CVexplorer.Extensions
                         .GetRequiredService<UserManager<User>>();
 
                         if (!ctx.Properties.Items.TryGetValue("UserId", out var localUserId))
-                            return; 
+                            return;
 
                         var user = await userManager.FindByIdAsync(localUserId);
                         if (user == null) return;
@@ -167,6 +168,7 @@ namespace CVexplorer.Extensions
                                     unixSeconds);
                         }
 
+                        
                         ctx.Properties.IsPersistent = true;
 
                         await ctx.HttpContext.SignInAsync(
@@ -187,7 +189,7 @@ namespace CVexplorer.Extensions
                 .AddOpenIdConnect("Microsoft",
                     options =>
                     {
-                        
+
                         options.Authority = $"{configuration["Microsoft:AzureAd:Instance"]}{configuration["Microsoft:AzureAd:TenantId"]}/v2.0";
                         options.ClientId = configuration["Microsoft:AzureAd:ClientId"];
                         options.ClientSecret = configuration["Microsoft:AzureAd:ClientSecret"];
@@ -203,8 +205,8 @@ namespace CVexplorer.Extensions
                         options.Scope.Add("User.Read");
                         options.Scope.Add("Mail.Read");
                         options.Scope.Add("offline_access");
-                        options.Scope.Add("openid");           
-                        options.Scope.Add("profile");          
+                        options.Scope.Add("openid");
+                        options.Scope.Add("profile");
 
                         options.Scope.Add("Mail.Send");
 

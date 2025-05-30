@@ -18,6 +18,8 @@ namespace CVexplorer.Services.Interface
 
         Task ProcessHistoryAsync(long subscriptionId, CancellationToken ct);
 
+        Task<GmailSessionDTO> GetSessionDataAsync(string userId, string? publicId = null);
+
         Task Disconnect(string userId);
     }
 }
