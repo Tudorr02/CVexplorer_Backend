@@ -140,13 +140,15 @@ namespace CVexplorer.Services.Implementation
             return result;
         }
 
-        public async Task<List<OutlookFolderListDTO>> SubscribeFolders(List<string>folderIds,string userId, TokenResult tokens, string publicPosId)
+        public async Task<List<OutlookFolderListDTO>> SubscribeFolders(List<string>folderIds,string userId, TokenResult tokens, string publicPosId , string? roundId = null)
         {
             
             var position = await _context.Positions
                 .SingleOrDefaultAsync(p => p.PublicId == publicPosId)
                 ?? throw new Exception("Position does not exist");
 
+            var user = await _userManager.FindByIdAsync(userId)
+                       ?? throw new Exception("User does not exist");
 
             var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider(msg =>
             {
@@ -156,21 +158,46 @@ namespace CVexplorer.Services.Implementation
 
             // 5) Luăm subscripțiile deja salvate în DB
             var existingSubs = await _context.IntegrationSubscriptions
-                .Where(s => s.UserId == Convert.ToInt32(userId)
+                .Where(s => s.UserId == user.Id
                          && s.Provider == "Outlook"
                          && s.PositionId == position.Id)
                 .ToListAsync();
 
         
-            Round initialRound = null;
-            if (!existingSubs.Any())
-                initialRound = await _roundRepository.CreateAsync(position.Id);
 
-            
-            var toAdd = folderIds.Distinct().Except(existingSubs.Select(s => s.LabelId));
-            var toRemove = existingSubs.Select(s => s.LabelId).Except(folderIds.Distinct());
+            Round actualRound;
+            if (!string.IsNullOrWhiteSpace(roundId))
+            {
+                // Dacă roundId e dat, îl încarc din baza de date
+                actualRound = await _context.Rounds
+                    .SingleOrDefaultAsync(r => r.PublicId == roundId)
+                    ?? throw new Exception($"Round with PublicId {roundId} does not exist");
+            }
+            else
+            {
+                // Dacă nu e dat, creez unul nou
+                actualRound = await _roundRepository.CreateAsync(position.Id);
+            }
 
-            
+            var distinctFolders = folderIds.Distinct().ToArray();
+            var toAdd = distinctFolders.Except(existingSubs.Select(s => s.LabelId));
+            var toRemove = existingSubs.Select(s => s.LabelId).Except(distinctFolders);
+
+
+            if (toRemove.Count() == existingSubs.Count && existingSubs.Count > 0)
+            {
+                // Șterg fiecare subscripție de pe Graph
+                foreach (var sub in existingSubs)
+                {
+                    await graphClient
+                        .Subscriptions[sub.SubscriptionName]
+                        .Request()
+                        .DeleteAsync();
+                }
+
+                _context.IntegrationSubscriptions.RemoveRange(existingSubs);
+                existingSubs.Clear();
+            }
             if (toRemove.Any())
             {
                 var subsToDelete = existingSubs
@@ -185,18 +212,47 @@ namespace CVexplorer.Services.Implementation
                                      .DeleteAsync();
                     _context.IntegrationSubscriptions.Remove(sub);
                 }
+
+                _context.IntegrationSubscriptions.RemoveRange(subsToDelete);
+                existingSubs.RemoveAll(s => toRemove.Contains(s.LabelId));
             }
 
             
-            var remainingLabels = existingSubs
+            var remainingFolders = existingSubs
                 .Where(s => !toRemove.Contains(s.LabelId))
                 .Select(s => s.LabelId)
                 .Union(toAdd)
                 .Distinct()
                 .ToList();
 
-            if (remainingLabels.Any())
+
+            if (!remainingFolders.Any())
             {
+                await _context.SaveChangesAsync();
+
+                // Returnez toate folderele cu isSubscribed = false
+                var allFoldersEmpty = new List<MailFolder>();
+                var firstPageEmpty = await graphClient.Me.MailFolders.Request().GetAsync();
+                allFoldersEmpty.AddRange(firstPageEmpty.CurrentPage);
+                while (firstPageEmpty.NextPageRequest != null)
+                {
+                    firstPageEmpty = await firstPageEmpty.NextPageRequest.GetAsync();
+                    allFoldersEmpty.AddRange(firstPageEmpty.CurrentPage);
+                }
+
+                return allFoldersEmpty
+                    .Select(f => new OutlookFolderListDTO
+                    {
+                        Id = f.Id,
+                        Name = f.DisplayName,
+                        isSubscribed = false
+                    })
+                    .ToList();
+            }
+
+
+            
+            
                 var msUser = await graphClient.Me
                 .Request()
                 .Select(u => new {
@@ -242,49 +298,51 @@ namespace CVexplorer.Services.Implementation
                         ExpiresAt = sub.ExpirationDateTime.Value,
                         UpdatedAt = DateTimeOffset.UtcNow,
                         SubscriptionName = sub.Id,
-                        RoundId = initialRound != null
-                                             ? initialRound.Id
-                                             : existingSubs.First().RoundId
+                        RoundId = actualRound.Id
                     };
                     _context.IntegrationSubscriptions.Add(integrationSub);
 
 
                 }
-
-            }
-
-            
-            await _context.SaveChangesAsync();
-
-            var allFolders = new List<MailFolder>();
-            var page = await graphClient.Me.MailFolders.Request().GetAsync();
-            allFolders.AddRange(page.CurrentPage);
-            while (page.NextPageRequest != null)
-            {
-                page = await page.NextPageRequest.GetAsync();
-                allFolders.AddRange(page.CurrentPage);
-            }
-
-            // 11) Which folder IDs are currently subscribed?
-            var subscribedIds = await _context.IntegrationSubscriptions
-                .Where(s =>
-                    s.Provider == "Outlook" &&
-                    s.UserId.ToString() == userId &&
-                    s.PositionId == position.Id)
-                .Select(s => s.LabelId)
-                .ToListAsync();
-
-            
-            var result = allFolders
-                .Select(f => new OutlookFolderListDTO
+                foreach (var sub in existingSubs)
                 {
-                    Id = f.Id,
-                    Name = f.DisplayName,
-                    isSubscribed = subscribedIds.Contains(f.Id)
-                })
-                .ToList();
 
-            return result;
+                    sub.RoundId = actualRound.Id;
+                    sub.UpdatedAt = DateTimeOffset.UtcNow;
+
+                }
+
+
+                await _context.SaveChangesAsync();
+
+                var allFolders = new List<MailFolder>();
+                var page = await graphClient.Me.MailFolders.Request().GetAsync();
+                allFolders.AddRange(page.CurrentPage);
+                while (page.NextPageRequest != null)
+                {
+                    page = await page.NextPageRequest.GetAsync();
+                    allFolders.AddRange(page.CurrentPage);
+                }
+
+                // 11) Which folder IDs are currently subscribed?
+                var subscribedIds = await _context.IntegrationSubscriptions
+                    .Where(s =>
+                        s.Provider == "Outlook" &&
+                        s.UserId.ToString() == userId &&
+                        s.PositionId == position.Id)
+                    .Select(s => s.LabelId)
+                    .ToListAsync();
+
+            
+                return  allFolders
+                    .Select(f => new OutlookFolderListDTO
+                    {
+                        Id = f.Id,
+                        Name = f.DisplayName,
+                        isSubscribed = subscribedIds.Contains(f.Id)
+                    })
+                    .ToList();
+
         }
 
         public async Task ProcessNewMessageAsync(string messageId, string folderId, long subscriptionId)
@@ -349,7 +407,7 @@ namespace CVexplorer.Services.Implementation
                 .Select(p => p.PublicId)
                 .FirstOrDefaultAsync();
 
-            
+            int processedCVs = 0;
             foreach (var pdf in pdfFiles)
             {
                 var success = await _cvRepository.UploadDocumentAsync(
@@ -358,6 +416,8 @@ namespace CVexplorer.Services.Implementation
                     userId: sub.UserId,
                     roundId: sub.RoundId);
 
+                processedCVs++;
+
                 if (!success)
                 {
                     _logger.LogWarning(
@@ -365,6 +425,8 @@ namespace CVexplorer.Services.Implementation
                         pdf.FileName, sub.UserId, sub.RoundId);
                 }
             }
+            sub.ProcessedCVs += processedCVs;
+            await _context.SaveChangesAsync();
 
 
         }
@@ -457,6 +519,46 @@ namespace CVexplorer.Services.Implementation
 
             await _context.SaveChangesAsync();
         }
+
+        public async Task<SessionDTO> GetSessionDataAsync(string userId, string? publicId = null)
+        {
+            var user = await _userManager.FindByIdAsync(userId)
+                       ?? throw new Exception("User does not exist");
+
+
+            var expiresAtStr = await _userManager.GetAuthenticationTokenAsync(
+                                   user, "Microsoft", "expires_at");
+
+            string? expiry = null;
+            if (long.TryParse(expiresAtStr, out var unix))
+            {
+                var dto = DateTimeOffset.FromUnixTimeSeconds(unix);
+                // obținem stringul ISO 8601, ex: "2025-05-30T14:23:45.0000000Z"
+                expiry = dto.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffK");
+            }
+
+
+
+
+            var position = await _context.Positions
+                .SingleOrDefaultAsync(p => p.PublicId == publicId)
+                ?? throw new Exception("Position does not exist");
+
+            var existingSub = await _context.IntegrationSubscriptions.Include(s => s.Round).FirstOrDefaultAsync(s =>
+                s.UserId == user.Id && s.Provider == "Outlook" && s.PositionId == position.Id);
+
+
+
+            return new SessionDTO
+            {
+                ProcessedCVs = existingSub?.ProcessedCVs ?? 0,
+                IsProcessing = existingSub != null ? true : false,
+                Expiry = expiry,
+                ProcessingRoundId = existingSub?.Round.PublicId ?? null,
+            };
+
+        }
+
 
     }
 }

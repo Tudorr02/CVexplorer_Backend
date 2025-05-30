@@ -50,7 +50,7 @@ namespace CVexplorer.Controllers
         [HttpGet("Session")]
         [Authorize(AuthenticationSchemes = $"{JwtBearerDefaults.AuthenticationScheme},{"MicrosoftCookie"}")]
 
-        public async Task<IActionResult> Session()
+        public async Task<IActionResult> Session(string? publicId = null)
         {
             
             var jwtResult = await HttpContext.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme);
@@ -69,8 +69,10 @@ namespace CVexplorer.Controllers
             if (tokens == null)
                 return Ok(new { sessionActive });
 
-            sessionActive= true;
-            return Ok(new { sessionActive });
+            var data = await _oService.GetSessionDataAsync(jwtUserId, publicId);
+
+            sessionActive = true;
+            return Ok(new { sessionActive, data });
         }
 
 
@@ -102,7 +104,7 @@ namespace CVexplorer.Controllers
 
         [HttpPost("Watch")]
         [Authorize(AuthenticationSchemes = $"{JwtBearerDefaults.AuthenticationScheme},{"MicrosoftCookie"}")]
-        public async Task<ActionResult<List<OutlookFolderListDTO>>> SubscribeFolders(List<string> folderIds, string publicPosId)
+        public async Task<ActionResult<List<OutlookFolderListDTO>>> SubscribeFolders(List<string> folderIds, string publicPosId, string? roundId)
         {
 
             var jwtResult = await HttpContext.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme);
@@ -122,7 +124,7 @@ namespace CVexplorer.Controllers
 
             try
             {
-                return await _oService.SubscribeFolders(folderIds, userId, tokens, publicPosId);
+                return await _oService.SubscribeFolders(folderIds, userId, tokens, publicPosId, roundId);
             }
             catch (Exception ex)
             {

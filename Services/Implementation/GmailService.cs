@@ -121,7 +121,7 @@ namespace CVexplorer.Services.Implementation
         }
 
 
-        public async Task<List<GmailFolderListDTO>> WatchLabels(UserCredential cred,List<string> labelIds, string positionPublicId, string userId)
+        public async Task<List<GmailFolderListDTO>> WatchLabels(UserCredential cred,List<string> labelIds, string positionPublicId, string userId , string? roundId= null)
         {
             var position = await _context.Positions
                .SingleOrDefaultAsync(p => p.PublicId == positionPublicId)
@@ -132,42 +132,58 @@ namespace CVexplorer.Services.Implementation
 
             
             
+            
+            var existingSubs = await _context.IntegrationSubscriptions
+                .Where(s => s.UserId == user.Id && s.Provider == "Gmail" && s.PositionId == position.Id)
+                .ToListAsync();
+
+
+            Round actualRound;
+            if (!string.IsNullOrWhiteSpace(roundId))
+            {
+                // Dacă roundId e dat, îl încarc din baza de date
+                actualRound = await _context.Rounds
+                    .SingleOrDefaultAsync(r => r.PublicId == roundId)
+                    ?? throw new Exception($"Round with PublicId {roundId} does not exist");
+            }
+            else
+            {
+                // Dacă nu e dat, creez unul nou
+                actualRound = await _roundRepository.CreateAsync(position.Id);
+            }
+
             var gmailSvc = new Google.Apis.Gmail.v1.GmailService(new BaseClientService.Initializer
             {
                 HttpClientInitializer = cred,
                 ApplicationName = _config["Google:ApplicationName"]
             });
 
-            var existingSubs = await _context.IntegrationSubscriptions
-                .Where(s => s.UserId == user.Id && s.Provider == "Gmail" && s.PositionId == position.Id)
-                .ToListAsync();
 
-            
-            Round initialRound = null;
-            if (!existingSubs.Any())
+            var distinctLabels = labelIds.Distinct().ToArray();
+            var toAdd = distinctLabels.Except(existingSubs.Select(s => s.LabelId));
+            var toRemove = existingSubs.Select(s => s.LabelId).Except(distinctLabels);
+
+
+            if (toRemove.Count() == existingSubs.Count)
             {
-                initialRound = await _roundRepository.CreateAsync(position.Id);
+                await gmailSvc.Users.Stop("me").ExecuteAsync();
+                _context.IntegrationSubscriptions.RemoveRange(existingSubs);
+                existingSubs.Clear();
             }
-
-            
-            var toAdd = labelIds.Distinct().Except(existingSubs.Select(s => s.LabelId));
-            var toRemove = existingSubs.Select(s => s.LabelId).Except(labelIds.Distinct());
-
-            
-            if (toRemove.Any())
+            else if (toRemove.Any())
             {
                 await gmailSvc.Users.Stop("me").ExecuteAsync();
                 var subsToDelete = existingSubs.Where(s => toRemove.Contains(s.LabelId)).ToList();
                 _context.IntegrationSubscriptions.RemoveRange(subsToDelete);
+                existingSubs.RemoveAll(s => toRemove.Contains(s.LabelId));
             }
 
-            
+
             var remainingLabels = existingSubs
-                .Where(s => !toRemove.Contains(s.LabelId))
-                .Select(s => s.LabelId)
-                .Union(toAdd)
-                .Distinct()
-                .ToArray();
+                  .Select(s => s.LabelId)
+                  .Union(toAdd)
+                  .Distinct()
+                  .ToArray();
 
             if (!remainingLabels.Any())
             {
@@ -194,7 +210,7 @@ namespace CVexplorer.Services.Implementation
             var profile = await gmailSvc.Users.GetProfile("me").ExecuteAsync();
 
             
-            foreach (var lbl in labelIds.Distinct())
+            foreach (var lbl in remainingLabels)
             {
 
                 var sub = existingSubs.FirstOrDefault(s => s.LabelId == lbl);
@@ -208,9 +224,13 @@ namespace CVexplorer.Services.Implementation
                         PositionId = position.Id,
                         Email = profile.EmailAddress,
                         SubscriptionName = watchReq.TopicName,
-                        RoundId = initialRound != null ? initialRound.Id : existingSubs.First().RoundId
+                        RoundId = actualRound.Id
                     };
                     _context.IntegrationSubscriptions.Add(sub);
+                }
+                else
+                {
+                    sub.RoundId = actualRound.Id;
                 }
 
                 // setăm token-ul și expirarea
@@ -224,10 +244,7 @@ namespace CVexplorer.Services.Implementation
 
             var allLabels = await gmailSvc.Users.Labels.List("me").ExecuteAsync();
 
-            var subscribedIds = await _context.IntegrationSubscriptions
-                .Where(s => s.UserId == user.Id && s.Provider == "Gmail" && s.PositionId == position.Id)
-                .Select(s => s.LabelId)
-                .ToListAsync();
+            var subscribedIds = existingSubs.Select(s => s.LabelId).ToHashSet();
 
             var result = allLabels.Labels.Select(lbl => new GmailFolderListDTO
             {
@@ -388,7 +405,7 @@ namespace CVexplorer.Services.Implementation
             await _context.SaveChangesAsync(ct);
         }
 
-        public async Task<GmailSessionDTO> GetSessionDataAsync (string userId , string? publicId = null)
+        public async Task<SessionDTO> GetSessionDataAsync (string userId , string? publicId = null)
         {
             var user = await _userManager.FindByIdAsync(userId)
                        ?? throw new Exception("User does not exist");
@@ -402,7 +419,7 @@ namespace CVexplorer.Services.Implementation
             {
                 var dto = DateTimeOffset.FromUnixTimeSeconds(unix);
                 // obținem stringul ISO 8601, ex: "2025-05-30T14:23:45.0000000Z"
-                expiry = dto.ToUniversalTime().ToString("o");
+                expiry = dto.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffK");
             }
 
             
@@ -412,14 +429,17 @@ namespace CVexplorer.Services.Implementation
                 .SingleOrDefaultAsync(p => p.PublicId == publicId)
                 ?? throw new Exception("Position does not exist");
 
-            var existingSub = await _context.IntegrationSubscriptions.FirstOrDefaultAsync(s =>
+            var existingSub = await _context.IntegrationSubscriptions.Include(s => s.Round).FirstOrDefaultAsync(s =>
                 s.UserId == user.Id && s.Provider == "Gmail" && s.PositionId == position.Id);
 
+            
 
-            return new GmailSessionDTO
+            return new SessionDTO
             {
                 ProcessedCVs = existingSub?.ProcessedCVs ?? 0,
-                Expiry = expiry
+                IsProcessing = existingSub != null ? true : false,
+                Expiry = expiry,
+                ProcessingRoundId = existingSub?.Round.PublicId ?? null,
             };
 
         }

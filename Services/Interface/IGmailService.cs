@@ -10,7 +10,7 @@ namespace CVexplorer.Services.Interface
 
         Task<UserCredential> GetOrRefreshTokensAsync(string userId);
 
-        Task<List<GmailFolderListDTO>> WatchLabels(UserCredential cred,List<string> labelIds, string positionPublicId, string userId);
+        Task<List<GmailFolderListDTO>> WatchLabels(UserCredential cred,List<string> labelIds, string positionPublicId, string userId , string? roundId= null);
 
         Task<bool> Unsubscribe(UserCredential cred, string positionPublicId, string userId);
 
@@ -18,7 +18,7 @@ namespace CVexplorer.Services.Interface
 
         Task ProcessHistoryAsync(long subscriptionId, CancellationToken ct);
 
-        Task<GmailSessionDTO> GetSessionDataAsync(string userId, string? publicId = null);
+        Task<SessionDTO> GetSessionDataAsync(string userId, string? publicId = null);
 
         Task Disconnect(string userId);
     }

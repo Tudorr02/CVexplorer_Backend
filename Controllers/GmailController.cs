@@ -127,7 +127,7 @@ namespace CVexplorer.Controllers
         [HttpPost("Watch")]
         [Authorize(AuthenticationSchemes = $"{JwtBearerDefaults.AuthenticationScheme},{"GoogleCookie"}")]
 
-        public async Task<ActionResult<List<GmailFolderListDTO>>> WatchGmail(List<string> labelIds, string positionPublicId)
+        public async Task<ActionResult<List<GmailFolderListDTO>>> WatchGmail(List<string> labelIds, string positionPublicId , string? roundId)
         {
             var jwtResult = await HttpContext.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme);
             var cookieResult = await HttpContext.AuthenticateAsync("GoogleCookie");
@@ -148,7 +148,7 @@ namespace CVexplorer.Controllers
             
             try
             {
-                return await _gService.WatchLabels(credential,labelIds, positionPublicId, jwtUserId);
+                return await _gService.WatchLabels(credential,labelIds, positionPublicId, jwtUserId , roundId);
             }
             catch (Exception ex)
             {
