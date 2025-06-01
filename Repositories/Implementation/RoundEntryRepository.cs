@@ -27,67 +27,7 @@ namespace CVexplorer.Repositories.Implementation
                    .ToListAsync();
         }
 
-        public async Task<CvEvaluationDTO> GetRoundEntryAsync(int reId)
-        {
-            var rEntry = await _context.RoundEntries
-                .Include(re => re.Cv)
-                .ThenInclude(cv => cv.Evaluation)
-                .Include(re => re.Round)
-                .ThenInclude(r => r.Position)
-                .FirstOrDefaultAsync(re => re.Id == reId);
-
-            return new CvEvaluationDTO
-            {
-                FileData =Convert.ToBase64String(rEntry.Cv.Data),
-                Score = Convert.ToInt16(rEntry.Cv.Score),
-                cvPublicId = rEntry.Cv.PublicId.ToString(),
-                Evaluation = new CvEvaluationResultDTO
-                {
-                    CandidateName = rEntry.Cv.Evaluation.CandidateName,
-                    RequiredSkills = new CvScoreScrapedField<IList<string>>
-                    {
-                        Scraped = rEntry.Cv.Evaluation.RequiredSkills.Scraped.ToList(),
-                        Score = rEntry.Cv.Evaluation.RequiredSkills.Score
-                    },
-                    NiceToHave = new CvScoreScrapedField<IList<string>>
-                    {
-                        Scraped = rEntry.Cv.Evaluation.NiceToHave.Scraped.ToList(),
-                        Score = rEntry.Cv.Evaluation.NiceToHave.Score
-                    },
-                    Certifications = new CvScoreScrapedField<IList<string>>
-                    {
-                        Scraped = rEntry.Cv.Evaluation.Certifications.Scraped.ToList(),
-                        Score = rEntry.Cv.Evaluation.Certifications.Score
-                    },
-                    Responsibilities = new CvScoreScrapedField<IList<string>>
-                    {
-                        Scraped = rEntry.Cv.Evaluation.Responsibilities.Scraped.ToList(),
-                        Score = rEntry.Cv.Evaluation.Responsibilities.Score
-                    },
-                    Languages = new CvScoreValueField<IList<string>>
-                    {
-                        Value = rEntry.Cv.Evaluation.Languages.Value.ToList(),
-                        Score = rEntry.Cv.Evaluation.Languages.Score
-                    },
-                    MinimumExperienceMonths = new CvScoreValueField<double>
-                    {
-                        Value = rEntry.Cv.Evaluation.MinimumExperienceMonths.Value,
-                        Score = rEntry.Cv.Evaluation.MinimumExperienceMonths.Score
-                    },
-                    Level = new CvScoreValueField<PositionLevel>
-                    {
-                        Value = rEntry.Cv.Evaluation.Level.Value,
-                        Score = rEntry.Cv.Evaluation.Level.Score
-                    },
-                    MinimumEducationLevel = new CvScoreValueField<EducationLevel>
-                    {
-                        Value = rEntry.Cv.Evaluation.MinimumEducationLevel.Value,
-                        Score = rEntry.Cv.Evaluation.MinimumEducationLevel.Score
-                    }
-                },
-                PositionData = _posRepository.GetPositionAsync(rEntry.Round.Position.PublicId).Result
-            };
-        }
+      
 
         public async Task CreateAsync (int roundId , int cvId)
         {

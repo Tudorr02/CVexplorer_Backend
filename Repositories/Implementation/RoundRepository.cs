@@ -54,6 +54,7 @@ namespace CVexplorer.Repositories.Implementation
                     PublicId = r.PublicId,
                     Name = r.Name,
                     CreatedAt = r.CreatedAt,
+                    
                     CandidatesNumber = r.RoundEntries.Count
                 })
                 .ToListAsync();

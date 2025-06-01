@@ -126,20 +126,7 @@ namespace CVexplorer.Controllers
             return Ok(cvs);
         }
 
-        [HttpGet("{cvPublicId:guid}")]
-        public async Task<ActionResult<CvDTO>> GetCV(Guid cvPublicId)
-        {
-            if (!await IsUserAuthorizedAsync(null,cvPublicId))
-                return Forbid();
-
-            var cv = await _cvRepository.GetCVAsync(cvPublicId);
-
-            if (cv == null)
-                return NotFound();
-
-            return Ok(cv);
-        }
-
+        
 
         [HttpDelete]
         public async Task<IActionResult> DeleteCV(List<Guid> cvPublicIds, string? positionPublicId, int? departmentId = null)

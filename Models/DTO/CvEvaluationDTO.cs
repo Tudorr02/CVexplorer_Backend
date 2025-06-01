@@ -3,7 +3,6 @@
     public class CvEvaluationDTO
     {
         public string FileData { get; set; }
-        public string cvPublicId { get; set; }
         public int Score { get; set; } = 0;
         public CvEvaluationResultDTO Evaluation { get; set; } = new CvEvaluationResultDTO();
         public required PositionDTO PositionData { get; set; }

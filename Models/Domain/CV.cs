@@ -18,6 +18,8 @@ namespace CVexplorer.Models.Domain
         public int? UserUploadedById { get; set; }
         public double Score { get; set; } = 0;
 
+        public string UploadMethod { get; set; } = "Manual";
+
         public int EvaluationId { get; set; }
         public CvEvaluationResult Evaluation { get; set; }
 

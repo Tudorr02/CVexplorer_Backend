@@ -58,16 +58,7 @@ namespace CVexplorer.Controllers
             return true;
         }
 
-        [HttpGet("{entryId}")]
-        public async Task<ActionResult<CvEvaluationDTO>> GetRoundEntry(int entryId)
-        {
-            if (!await IsUserAuthorizedAsync(entryId))
-                return Forbid();
-
-            var dto = await _rEntryRepo.GetRoundEntryAsync(entryId);
-            if (dto == null) return NotFound();
-            return Ok(dto);
-        }
+        
 
         [HttpPut("{entryId}")]
         public async Task<IActionResult> UpdateRoundEntry(int entryId, bool selected)

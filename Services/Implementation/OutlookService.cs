@@ -414,7 +414,7 @@ namespace CVexplorer.Services.Implementation
                     file: pdf,
                     publicPositionId: publicPositionId!,
                     userId: sub.UserId,
-                    roundId: sub.RoundId);
+                    roundId: sub.RoundId , "Outlook");
 
                 processedCVs++;
 

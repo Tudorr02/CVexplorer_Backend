@@ -12,7 +12,7 @@
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-
+  
         public ICollection<RoundEntry> RoundEntries { get; set; } = new List<RoundEntry>();
 
         public ICollection<IntegrationSubscription>? IntegrationSubscriptions { get; set; } = new List<IntegrationSubscription>();

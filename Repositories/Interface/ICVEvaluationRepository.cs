@@ -10,5 +10,7 @@ namespace CVexplorer.Repositories.Interface
 
         Task<IReadOnlyList<CvEvaluationResult>> CreateBulkAsync(List<string> cvTexts,Position position);
 
+        Task<CvEvaluationDTO> GetEvaluationAsync(Guid publicId);
+
     }
 }

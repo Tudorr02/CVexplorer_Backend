@@ -393,7 +393,7 @@ namespace CVexplorer.Services.Implementation
                 // 7. Upload
                 foreach (var file in pdfFiles)
                 {
-                    await _cvRepository.UploadDocumentAsync(file, positionPublicId, sub.User.Id, sub.RoundId);
+                    await _cvRepository.UploadDocumentAsync(file, positionPublicId, sub.User.Id, sub.RoundId,"Gmail");
                     processedCVs++;
                 }
             }

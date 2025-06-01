@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CVexplorer.Repositories.Implementation
 {
-    public class CVEvaluationRepository(DataContext _context , ICvEvaluationService _evaluator ) : ICVEvaluationRepository
+    public class CVEvaluationRepository(DataContext _context , ICvEvaluationService _evaluator , IPositionRepository _posRepository) : ICVEvaluationRepository
     {
         public async Task<CvEvaluationResult> CreateAsync(string cvText, Position position)
         {
@@ -21,6 +21,66 @@ namespace CVexplorer.Repositories.Implementation
             await _context.SaveChangesAsync();
             return evaluation;
             
+        }
+
+        public async Task<CvEvaluationDTO> GetEvaluationAsync(Guid publicId)
+        {
+            var cv = await _context.CVs
+                .Include(c => c.Evaluation)
+                .Include(r => r.Position)
+                .FirstOrDefaultAsync(c => c.PublicId == publicId);
+            if (cv == null) return null;
+
+            return new CvEvaluationDTO
+            {
+                FileData = Convert.ToBase64String(cv.Data),
+                Score = Convert.ToInt16(cv.Score),
+                Evaluation = new CvEvaluationResultDTO
+                {
+                    CandidateName = cv.Evaluation.CandidateName,
+                    RequiredSkills = new CvScoreScrapedField<IList<string>>
+                    {
+                        Scraped = cv.Evaluation.RequiredSkills.Scraped.ToList(),
+                        Score = cv.Evaluation.RequiredSkills.Score
+                    },
+                    NiceToHave = new CvScoreScrapedField<IList<string>>
+                    {
+                        Scraped = cv.Evaluation.NiceToHave.Scraped.ToList(),
+                        Score = cv.Evaluation.NiceToHave.Score
+                    },
+                    Certifications = new CvScoreScrapedField<IList<string>>
+                    {
+                        Scraped = cv.Evaluation.Certifications.Scraped.ToList(),
+                        Score = cv.Evaluation.Certifications.Score
+                    },
+                    Responsibilities = new CvScoreScrapedField<IList<string>>
+                    {
+                        Scraped = cv.Evaluation.Responsibilities.Scraped.ToList(),
+                        Score = cv.Evaluation.Responsibilities.Score
+                    },
+                    Languages = new CvScoreValueField<IList<string>>
+                    {
+                        Value = cv.Evaluation.Languages.Value.ToList(),
+                        Score = cv.Evaluation.Languages.Score
+                    },
+                    MinimumExperienceMonths = new CvScoreValueField<double>
+                    {
+                        Value = cv.Evaluation.MinimumExperienceMonths.Value,
+                        Score = cv.Evaluation.MinimumExperienceMonths.Score
+                    },
+                    Level = new CvScoreValueField<PositionLevel>
+                    {
+                        Value = cv.Evaluation.Level.Value,
+                        Score = cv.Evaluation.Level.Score
+                    },
+                    MinimumEducationLevel = new CvScoreValueField<EducationLevel>
+                    {
+                        Value = cv.Evaluation.MinimumEducationLevel.Value,
+                        Score = cv.Evaluation.MinimumEducationLevel.Score
+                    }
+                },
+                PositionData = _posRepository.GetPositionAsync(cv.Position.PublicId).Result
+            };
         }
 
         public async Task<CvEvaluationResultDTO> UpdateAsync(Guid cvPublicId, CvEvaluationResultDTO editDto)

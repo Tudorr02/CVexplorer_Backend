@@ -24,7 +24,7 @@ using CVexplorer.Models.Primitives;
 
 namespace CVexplorer.Repositories.Implementation
 {
-    public class CVRepository(DataContext _context , ICVEvaluationRepository _evaluation , IRoundRepository _roundRepository , IRoundEntryRepository _rEntryRepository) : ICVRepository
+    public class CVRepository(DataContext _context , ICVEvaluationRepository _evaluation , IRoundRepository _roundRepository , IRoundEntryRepository _rEntryRepository , IPositionRepository _posRepository) : ICVRepository
     { 
 
         public async Task<IEnumerable<CvListDTO>> GetAllCVsAsync(string? positionPublicId = null , int?departmentId= null)
@@ -42,6 +42,7 @@ namespace CVexplorer.Repositories.Implementation
                     cv.Position.DepartmentId == departmentId.Value);
             }
 
+            query = query.OrderByDescending(cv => cv.UploadedAt);
             return await query
                 .Select(cv => new CvListDTO
                 {
@@ -49,6 +50,7 @@ namespace CVexplorer.Repositories.Implementation
                     FileName = cv.FileName,
                     UploadedAt = cv.UploadedAt,
                     UploadedBy = cv.UserUploadedBy.UserName,
+                    UploadMethod = string.IsNullOrEmpty(cv.UploadMethod) ? "Unknown" : cv.UploadMethod ,
                     Score = (short)cv.Score
                 })
                 .ToListAsync();
@@ -82,7 +84,7 @@ namespace CVexplorer.Repositories.Implementation
             return true;
         }
 
-        public async Task<bool> UploadDocumentAsync(IFormFile file, string positionPublicId, int userId , int? roundId = null)
+        public async Task<bool> UploadDocumentAsync(IFormFile file, string positionPublicId, int userId , int? roundId = null, string? uploadMethod = "Manual")
         {
             var position = await _context.Positions.Include(p => p.Weights).FirstOrDefaultAsync(p => p.PublicId == positionPublicId)
                 ?? throw new ArgumentException("Position not found.");
@@ -107,6 +109,7 @@ namespace CVexplorer.Repositories.Implementation
                 Data = ms.ToArray(),
                 UserUploadedById = userId,
                 Evaluation = evaluation,
+                UploadMethod = uploadMethod,
                 Score = CalculateScore(evaluation, position.Weights)
             };
 
@@ -184,24 +187,9 @@ namespace CVexplorer.Repositories.Implementation
             return true;
         }
 
-        public async Task<CvDTO> GetCVAsync(Guid publicId)
-        {
-            var cv = await _context.CVs
-                .Include(c => c.UserUploadedBy)
-                .Include(c => c.Evaluation)
-                .FirstOrDefaultAsync(c => c.PublicId == publicId);
 
-            if (cv == null) return null;
 
-            return new CvDTO
-            {
-                FileName = cv.FileName ?? "Unnamed",
-                UploadedAt = cv.UploadedAt.ToString("yyyy-MM-dd HH:mm:ss"),
-                UploadedBy = cv.UserUploadedBy?.UserName,
-                FileData = Convert.ToBase64String(cv.Data)
-                
-            };
-        }
+       
 
         private string ExtractText(Stream pdfStream)
         {

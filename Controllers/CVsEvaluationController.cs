@@ -1,6 +1,7 @@
 ﻿using CVexplorer.Data;
 using CVexplorer.Models.Domain;
 using CVexplorer.Models.DTO;
+using CVexplorer.Repositories.Implementation;
 using CVexplorer.Repositories.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -78,5 +79,21 @@ namespace CVexplorer.Controllers
                 return NotFound();
             }
         }
+
+
+        [HttpGet("{cvPublicId:guid}")]
+        public async Task<ActionResult<CvEvaluationDTO>> GetEvaluation(Guid cvPublicId)
+        {
+            if (!await IsUserAuthorizedAsync(null, cvPublicId))
+                return Forbid();
+
+            var cv = await _cvEvaluation.GetEvaluationAsync(cvPublicId);
+
+            if (cv == null)
+                return NotFound();
+
+            return Ok(cv);
+        }
+
     }
 }
