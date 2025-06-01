@@ -30,7 +30,8 @@ namespace CVexplorer.Repositories.Implementation
             var rounds = _context.Rounds
                 .Include(r => r.Position)
                 .ThenInclude(p => p.Department)
-                .Include(r => r.RoundEntries)
+                .Include(r => r.Stages)
+                .ThenInclude(s => s.Entries)
                 .AsQueryable();
 
 
@@ -54,8 +55,9 @@ namespace CVexplorer.Repositories.Implementation
                     PublicId = r.PublicId,
                     Name = r.Name,
                     CreatedAt = r.CreatedAt,
-                    
-                    CandidatesNumber = r.RoundEntries.Count
+                    CandidatesNumber = r.Stages
+                        .Select(s => s.Entries)
+                        .Count(),
                 })
                 .ToListAsync();
         }

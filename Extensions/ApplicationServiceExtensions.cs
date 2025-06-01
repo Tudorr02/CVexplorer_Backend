@@ -57,6 +57,7 @@ namespace CVexplorer.Extensions
             services.AddHttpContextAccessor();
             services.AddScoped<IGmailService, Services.Implementation.GmailService>();
             services.AddScoped<IOutlookService, OutlookService>();
+            services.AddScoped<IRoundStageRepository, RoundStageRepository>();
 
             return services;
         }

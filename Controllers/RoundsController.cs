@@ -123,9 +123,10 @@ namespace CVexplorer.Controllers
             if (!await IsUserAuthorizedAsync(null, publicId, null))
                 return Forbid();
 
-            var list = await _rEntryRepo.GetAllAsync(publicId);
-            if (list == null) return NotFound();
-            return Ok(list);
+            //var list = await _rEntryRepo.GetAllAsync(publicId);
+            //if (list == null) return NotFound();
+            //return Ok(list);
+            return null;
         }
 
     }

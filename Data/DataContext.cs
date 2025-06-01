@@ -31,7 +31,7 @@ namespace CVexplorer.Data
 
         public DbSet<RoundEntry> RoundEntries { get; set; }
         public DbSet<Round> Rounds { get; set; }
-
+        public DbSet<RoundStage> RoundStages { get; set; }
         public DbSet<IntegrationSubscription> IntegrationSubscriptions { get; set; }
 
 
@@ -252,10 +252,22 @@ namespace CVexplorer.Data
                  .Metadata.SetValueComparer(JsonEnumComparer < CvScoreValueField<EducationLevel>> ());
             });
 
-            modelBuilder.Entity<Round>()
-              .HasMany(r => r.RoundEntries)
-              .WithOne(e => e.Round)
-              .HasForeignKey(e => e.RoundId)
+            //modelBuilder.Entity<Round>()
+            //  .HasMany(r => r.RoundEntries)
+            //  .WithOne(e => e.Round)
+            //  .HasForeignKey(e => e.RoundId)
+            //  .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<RoundStage>()
+               .HasOne(rs => rs.Round)
+               .WithMany(r => r.Stages)
+               .HasForeignKey(rs => rs.RoundId)
+               .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<RoundEntry>()
+              .HasOne(re => re.Stage)
+              .WithMany(rs => rs.Entries)
+              .HasForeignKey(re => re.StageId)
               .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<CV>()

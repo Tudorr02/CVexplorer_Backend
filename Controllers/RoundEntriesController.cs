@@ -27,9 +27,9 @@ namespace CVexplorer.Controllers
             if (user == null || user.CompanyId == null)
                 return false;
 
-            var roundId = await _context.RoundEntries
+            var roundId = await _context.RoundEntries.Include(re => re.Stage).ThenInclude(s => s.Round)
                 .Where(re => re.Id == entryId)
-                .Select(re => re.RoundId)
+                .Select(re => re.Stage.RoundId)
                 .FirstOrDefaultAsync();
 
 
@@ -60,25 +60,25 @@ namespace CVexplorer.Controllers
 
         
 
-        [HttpPut("{entryId}")]
-        public async Task<IActionResult> UpdateRoundEntry(int entryId, bool selected)
-        {
-            if (!await IsUserAuthorizedAsync(entryId))
-                return Forbid();
+        //[HttpPut("{entryId}")]
+        //public async Task<IActionResult> UpdateRoundEntry(int entryId, bool selected)
+        //{
+        //    if (!await IsUserAuthorizedAsync(entryId))
+        //        return Forbid();
 
-            try
-            {
-                var updatedEntry = await _rEntryRepo.UpdateAsync(entryId, selected);
-                if (updatedEntry == null)
-                    return NotFound();
-                return Ok(updatedEntry);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest($"An error occurred while updating the round entry: {ex.Message}");
-            }
+        //    try
+        //    {
+        //        var updatedEntry = await _rEntryRepo.UpdateAsync(entryId, selected);
+        //        if (updatedEntry == null)
+        //            return NotFound();
+        //        return Ok(updatedEntry);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest($"An error occurred while updating the round entry: {ex.Message}");
+        //    }
 
 
-        }
+        //}
     }
 }
