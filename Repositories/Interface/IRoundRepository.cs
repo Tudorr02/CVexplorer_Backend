@@ -1,5 +1,6 @@
 ﻿using CVexplorer.Models.Domain;
 using CVexplorer.Models.DTO;
+using Microsoft.AspNetCore.Mvc;
 
 namespace CVexplorer.Repositories.Interface
 {
@@ -10,6 +11,8 @@ namespace CVexplorer.Repositories.Interface
         Task<IEnumerable<RoundListDTO>> ListAsync(int? departmentId = null, string? publicPositionId = null);
 
         Task DeleteAsync(string publicId);
+
+        Task<ActionResult<List<RoundStageDTO>>> GetAsync(string publicId);
 
 
     }

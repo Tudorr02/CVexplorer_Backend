@@ -10,25 +10,7 @@ namespace CVexplorer.Repositories.Implementation
 {
     public class RoundEntryRepository(DataContext _context, IPositionRepository _posRepository) : IRoundEntryRepository
     {
-        //public async Task<IEnumerable<RoundEntryListDTO>> GetAllAsync(string roundId)
-        //{
-        //    return await _context.RoundEntries
-        //            .Include(re => re.Cv)
-        //             .Include(re => re.Stage)
-        //                .ThenInclude(s => s.Round)
-        //           .Where(re => re.Stage.Round.PublicId == roundId)
-        //           .Select(re => new RoundEntryListDTO
-        //           {
-        //               Id = re.Id,
-        //               CandidateName = re.Cv.Evaluation.CandidateName,
-        //               Score = Convert.ToInt16(re.Cv.Score),
-        //               StageName = re.Stage.Name,
-        //           })
-        //           .OrderByDescending(r=>r.Score)
-        //           .ToListAsync();
-        //}
 
-      
 
         public async Task CreateAsync (int roundId , int cvId)
         {
@@ -44,16 +26,31 @@ namespace CVexplorer.Repositories.Implementation
             await _context.SaveChangesAsync();
         }
 
-        public async Task<bool> UpdateAsync(int reId, int targetStageId)
+        public async Task<bool> UpdateAsync(int reId, int targetStageOrdinal)
         {
-            var roundEntry = await _context.RoundEntries.FindAsync(reId);
+            var roundEntry = await _context.RoundEntries
+            .Include(re => re.Stage)            // Include-ul ne ajută să avem acces la roundEntry.Stage.RoundId
+            .FirstOrDefaultAsync(re => re.Id == reId);
             if (roundEntry == null) return false;
 
-            var stage = await _context.RoundStages.FindAsync(targetStageId);
-            if (stage == null)
+            var currentRoundId = roundEntry.Stage.RoundId;
+
+            var targetStage = await _context.RoundStages
+            .FirstOrDefaultAsync(s =>
+                s.RoundId == currentRoundId &&
+                s.Ordinal == targetStageOrdinal);
+
+            if (targetStage == null)
                 return false;
 
-            roundEntry.StageId = targetStageId;
+            // 4. Dacă deja e în aceeași etapă (opțional)
+            if (roundEntry.StageId == targetStage.Id)
+            {
+                // Nu modificăm nimic; putem considera operațiunea ca reușită
+                return true;
+            }
+
+            roundEntry.StageId = targetStage.Id;
             _context.RoundEntries.Update(roundEntry);
             await _context.SaveChangesAsync();
             return true;

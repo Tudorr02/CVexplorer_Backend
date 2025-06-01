@@ -174,12 +174,9 @@ namespace CVexplorer.Repositories.Implementation
             await _context.CVs.AddRangeAsync(cvsToAdd);
             await _context.SaveChangesAsync();
 
-            var firstStage = await _context.RoundStages
-            .Where(rs => rs.RoundId == round.Id )
-            .OrderBy(rs => rs.Ordinal)
-            .FirstOrDefaultAsync()
-            ?? throw new InvalidOperationException("No active stages found.");
-                
+            var firstStage = round.Stages.SingleOrDefault(s => s.Ordinal == 0)
+                ?? throw new InvalidOperationException("Round must have at least one stage.");
+
             var roundEntries = cvsToAdd.Select(cv => new RoundEntry
             {
                 StageId = firstStage.Id,

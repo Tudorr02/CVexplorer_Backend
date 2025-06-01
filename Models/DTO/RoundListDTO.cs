@@ -8,5 +8,7 @@ namespace CVexplorer.Models.DTO
         public required string Name { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public int CandidatesNumber { get; set; }
+        public string Stage { get; set; }
+        public string? PositionName { get; internal set; }
     }
 }

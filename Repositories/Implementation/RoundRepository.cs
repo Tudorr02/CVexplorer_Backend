@@ -2,6 +2,7 @@
 using CVexplorer.Models.Domain;
 using CVexplorer.Models.DTO;
 using CVexplorer.Repositories.Interface;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace CVexplorer.Repositories.Implementation
@@ -18,7 +19,16 @@ namespace CVexplorer.Repositories.Implementation
                 PositionId = positionId,
                 Name = $"Round {existingCount + 1}",
                 PublicId = String.Format("{0}{1}", "R", Guid.NewGuid().ToString().Substring(0, 10)),
+                Stages = new List<RoundStage>()
+                {
+                    new RoundStage
+                    {
+                        Name = "All Candidates"
+                    }
+                }
+
             };
+          
             _context.Rounds.Add(round);
             await _context.SaveChangesAsync();
             return round;
@@ -56,8 +66,16 @@ namespace CVexplorer.Repositories.Implementation
                     Name = r.Name,
                     CreatedAt = r.CreatedAt,
                     CandidatesNumber = r.Stages
-                        .Select(s => s.Entries)
-                        .Count(),
+                .SelectMany(s => s.Entries)
+                .Count(),
+                    Stage = r.Stages
+                        .OrderByDescending(s => s.Ordinal)
+                        .Select(s => s.Name)
+                        .FirstOrDefault()
+                     ?? string.Empty,
+                    PositionName = departmentId.HasValue
+                               ? r.Position.Name
+                               : null
                 })
                 .ToListAsync();
         }
@@ -71,6 +89,40 @@ namespace CVexplorer.Repositories.Implementation
                 _context.Rounds.Remove(round);
                 await _context.SaveChangesAsync();
             }
+        }
+
+        public async Task<ActionResult<List<RoundStageDTO>>> GetAsync(string publicId)
+        {
+            var round = await _context.Rounds
+                .Include(r => r.Stages)
+                .ThenInclude(s => s.Entries)
+                .ThenInclude(e => e.Cv)
+                .FirstOrDefaultAsync(r => r.PublicId == publicId);
+
+            if (round == null)
+            {
+                return new NotFoundResult();
+            }
+
+            var dto = round.Stages
+                .OrderBy(s => s.Ordinal)         // (opțional) ca să fie ordonate după Ordinal
+                .Select(s => new RoundStageDTO
+                {
+                    Name = s.Name,
+                    Ordinal = s.Ordinal,
+
+                    Entries = s.Entries
+                        .Select(e => new RoundEntryListDTO
+                        {
+                            Id = e.Id,
+                            CandidateName = e.Cv.FileName,  // sau e.Cv.CandidateName, depinde cum ai definit CV-ul
+                            Score = Convert.ToInt16(e.Cv.Score)
+                        })
+                        .ToList()
+                })
+                .ToList();
+
+            return dto;
         }
     }
 

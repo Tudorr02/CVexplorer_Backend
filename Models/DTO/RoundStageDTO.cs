@@ -1,6 +1,6 @@
 ﻿namespace CVexplorer.Models.DTO
 {
-    public class RoundStageListDTO
+    public class RoundStageDTO
     {
        
         public string Name { get; set; }

@@ -58,27 +58,27 @@ namespace CVexplorer.Controllers
             return true;
         }
 
-        
-
-        //[HttpPut("{entryId}")]
-        //public async Task<IActionResult> UpdateRoundEntry(int entryId, bool selected)
-        //{
-        //    if (!await IsUserAuthorizedAsync(entryId))
-        //        return Forbid();
-
-        //    try
-        //    {
-        //        var updatedEntry = await _rEntryRepo.UpdateAsync(entryId, selected);
-        //        if (updatedEntry == null)
-        //            return NotFound();
-        //        return Ok(updatedEntry);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return BadRequest($"An error occurred while updating the round entry: {ex.Message}");
-        //    }
 
 
-        //}
+        [HttpPut("{entryId}")]
+        public async Task<IActionResult> UpdateRoundEntry(int entryId, int targetOrdinal)
+        {
+            if (!await IsUserAuthorizedAsync(entryId))
+                return Forbid();
+
+            try
+            {
+                var updatedEntry = await _rEntryRepo.UpdateAsync(entryId, targetOrdinal);
+                if (updatedEntry == null)
+                    return NotFound();
+                return Ok(updatedEntry);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"An error occurred while updating the round entry: {ex.Message}");
+            }
+
+
+        }
     }
 }
