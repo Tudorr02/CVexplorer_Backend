@@ -74,7 +74,7 @@ namespace CVexplorer.Controllers
             }
 
             [HttpDelete("/api/Rounds/{roundPublicId}/RoundStages/{ordinal}")]
-            public async Task<IActionResult> DeleteLastAsync(string roundPublicId,int ordinal)
+            public async Task<IActionResult> DeleteLastAsync(string roundPublicId, int ordinal)
             {
                 if (!await IsUserAuthorizedAsync(roundPublicId))
                 {

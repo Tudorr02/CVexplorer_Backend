@@ -118,7 +118,7 @@ namespace CVexplorer.Controllers
         }
 
         [HttpGet("{publicId}")]
-        public async Task<ActionResult<IEnumerable<RoundEntryListDTO>>> GetRound(string publicId)
+        public async Task<ActionResult<IEnumerable<RoundStageDTO>>> GetRound(string publicId)
         {
             if (!await IsUserAuthorizedAsync(null, publicId, null))
                 return Forbid();

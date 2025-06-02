@@ -29,6 +29,7 @@ namespace CVexplorer.Repositories.Implementation
                             Id = re.Id,
                             CandidateName = re.Cv.Evaluation.CandidateName,
                             Score = Convert.ToInt16(re.Cv.Score),
+                            PublicCvId = re.Cv.PublicId
                         })
                         .ToList()
                 });
