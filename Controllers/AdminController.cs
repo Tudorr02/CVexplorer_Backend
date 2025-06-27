@@ -11,13 +11,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Graph;
 
 namespace CVexplorer.Controllers
 {
     //[Authorize(Policy = "RequireModeratorRole")]
     [ApiController]
     [Route("api/[controller]")]
-    public class AdminController(DataContext _context,UserManager<User> _userManager, IDepartmentRepository _departmentManagement ,ICompanyManagementRepository _companyManagement ,IUserManagementRepository _userManagement , IMapper _mapper , ITokenService _tokenService) : Controller
+    public class AdminController(DataContext _context,UserManager<Models.Domain.User> _userManager, IDepartmentRepository _departmentManagement ,ICompanyManagementRepository _companyManagement ,IUserManagementRepository _userManagement , IMapper _mapper , ITokenService _tokenService) : Controller
     {
         [HttpGet("Users")]
         public async Task<ActionResult<List<UserManagementListDTO>>> GetUsers()
@@ -91,8 +92,15 @@ namespace CVexplorer.Controllers
                 {
                     return Forbid(); // Prevent deletion of the "admin" user
                 }
-                var deletedUser = await _userManagement.DeleteUserAsync(userId);
-                return Ok(deletedUser); // Returns deleted user details
+
+                var cvs = await _context.CVs
+                               .Where(c => c.UserUploadedById == userId)
+                               .ToListAsync();
+                cvs.ForEach(c => c.UserUploadedById = null);
+                await _context.SaveChangesAsync();
+
+                await _userManager.DeleteAsync(userToDelete);
+                return Ok(); // Returns deleted user details
             }
             catch (NotFoundException ex)
             {
