@@ -137,8 +137,12 @@ namespace CVexplorer.Repositories.Implementation
 
             if (userRole.Equals("Admin") || userRole.Equals("Moderator"))
                 throw new UnauthorizedAccessException("You are not allowed to delete Admin or Moderator users.");
-            
 
+            var cvs = await _context.CVs
+                            .Where(c => c.UserUploadedById == userId)
+                            .ToListAsync();
+            cvs.ForEach(c => c.UserUploadedById = null);
+            await _context.SaveChangesAsync();
             var result = await _userManager.DeleteAsync(user);
 
             if (!result.Succeeded)

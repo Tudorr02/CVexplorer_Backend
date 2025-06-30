@@ -368,33 +368,33 @@ namespace CVexplorer.Services.Implementation
                 msgReq.Format = UsersResource.MessagesResource.GetRequest.FormatEnum.Full;
                 var fullMsg = await msgReq.ExecuteAsync(ct);
 
-                // extract headers once
                 var hdrs = fullMsg.Payload.Headers;
                 var from = hdrs.FirstOrDefault(h => h.Name == "From")?.Value ?? "<unknown>";
                 var subject = hdrs.FirstOrDefault(h => h.Name == "Subject")?.Value ?? "<no subject>";
-
-                // 5. Descărcăm toate PDF-urile (filtrare + paralelizare internă)
                 var pdfFiles = await GetPdfFormFilesAsync(gmail, "me", msgId, fullMsg.Payload.Parts ?? Enumerable.Empty<MessagePart>(), ct);
 
                 if (!pdfFiles.Any())
-                {
-                    
+                { 
                     continue;
                 }
 
-                _logger.LogWarning("From: {From}, Subject: {Subject} — CONTAINS PDF", from, subject);
-
-                // 6. Obținem publicId-ul poziției o singură dată
                 var positionPublicId = await _context.Positions
                     .Where(p => p.Id == sub.PositionId)
                     .Select(p => p.PublicId)
                     .FirstOrDefaultAsync(ct);
 
-                // 7. Upload
                 foreach (var file in pdfFiles)
                 {
-                    await _cvRepository.UploadDocumentAsync(file, positionPublicId, sub.User.Id, sub.RoundId,"Gmail");
-                    processedCVs++;
+                    try
+                    {
+                        var success = await _cvRepository.UploadDocumentAsync(file, positionPublicId, sub.User.Id, sub.RoundId, "Gmail");
+                        processedCVs++;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex.Message + ". UploadDocumentAsync failed to process for  {FileName}, user {UserId}, round {RoundId}.",
+                        file.FileName, sub.UserId, sub.RoundId);
+                    }
                 }
             }
 

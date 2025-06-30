@@ -349,7 +349,6 @@ namespace CVexplorer.Services.Implementation
         {
             
             var sub = await _context.IntegrationSubscriptions
-                        .AsNoTracking()
                         .FirstOrDefaultAsync(s => s.Id == subscriptionId);
             if (sub == null)
                 throw new InvalidOperationException($"No subscription for folder {folderId}");
@@ -410,20 +409,23 @@ namespace CVexplorer.Services.Implementation
             int processedCVs = 0;
             foreach (var pdf in pdfFiles)
             {
-                var success = await _cvRepository.UploadDocumentAsync(
+                try
+                {
+                    var success = await _cvRepository.UploadDocumentAsync(
                     file: pdf,
                     publicPositionId: publicPositionId!,
                     userId: sub.UserId,
-                    roundId: sub.RoundId , "Outlook");
+                    roundId: sub.RoundId, "Outlook");
 
-                processedCVs++;
-
-                if (!success)
-                {
-                    _logger.LogWarning(
-                        "UploadDocumentAsync failed to process for  {FileName}, user {UserId}, round {RoundId}",
-                        pdf.FileName, sub.UserId, sub.RoundId);
+                    processedCVs++;
                 }
+                catch(Exception ex)
+                {
+                    _logger.LogError(ex.Message+
+                        ". UploadDocumentAsync failed to process for  {FileName}, user {UserId}, round {RoundId}.",
+                        pdf.FileName, sub.UserId, sub.RoundId );
+                }
+
             }
             sub.ProcessedCVs += processedCVs;
             await _context.SaveChangesAsync();

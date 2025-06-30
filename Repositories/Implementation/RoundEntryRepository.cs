@@ -43,10 +43,9 @@ namespace CVexplorer.Repositories.Implementation
             if (targetStage == null)
                 return false;
 
-            // 4. Dacă deja e în aceeași etapă (opțional)
             if (roundEntry.StageId == targetStage.Id)
             {
-                // Nu modificăm nimic; putem considera operațiunea ca reușită
+
                 return true;
             }
 
@@ -54,6 +53,20 @@ namespace CVexplorer.Repositories.Implementation
             _context.RoundEntries.Update(roundEntry);
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<string> UpdateDetails(int reId, string details)
+        {
+            var roundEntry = await _context.RoundEntries
+            .Include(re => re.Stage)           
+            .FirstOrDefaultAsync(re => re.Id == reId);
+            if (roundEntry == null) return null;
+
+            roundEntry.Details = details;
+
+            _context.RoundEntries.Update(roundEntry);
+            await _context.SaveChangesAsync();
+            return roundEntry.Details;
         }
 
 

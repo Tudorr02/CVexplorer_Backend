@@ -80,5 +80,27 @@ namespace CVexplorer.Controllers
 
 
         }
+
+
+        [HttpPut("{entryId}/Details")]
+        public async Task<ActionResult<string>> UpdateRoundEntryDetails(int entryId, string details)
+        {
+            if (!await IsUserAuthorizedAsync(entryId))
+                return Forbid();
+
+            try
+            {
+                var updatedEntryDetails = await _rEntryRepo.UpdateDetails(entryId, details);
+                if (updatedEntryDetails == null)
+                    return NotFound();
+                return Ok(updatedEntryDetails);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"An error occurred while updating the round entry: {ex.Message}");
+            }
+
+
+        }
     }
 }

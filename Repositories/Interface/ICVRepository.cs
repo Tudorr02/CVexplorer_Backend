@@ -10,9 +10,7 @@ namespace CVexplorer.Repositories.Interface
         Task<bool> UploadDocumentAsync(IFormFile file, string publicPositionId, int userId , int? roundId =null, string? uploadMethod = "Manual");
         Task<bool> UploadBulkArchiveAsync(IFormFile archiveFile, string positionPublicId, int userId);
 
-        Task<bool> DeleteCVsAsync(List<Guid> cvPublicIds, string? positionPublicId = null, int? departmentId = null);
-
-        //Task<CvDTO> GetCVAsync(Guid publicId);
+        Task<object> DeleteCVsAsync(List<Guid> cvPublicIds, string? positionPublicId = null, int? departmentId = null);
        
 
     }

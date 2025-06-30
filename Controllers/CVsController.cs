@@ -129,7 +129,7 @@ namespace CVexplorer.Controllers
         
 
         [HttpDelete]
-        public async Task<IActionResult> DeleteCV(List<Guid> cvPublicIds, string? positionPublicId, int? departmentId = null)
+        public async Task<ActionResult<object>> DeleteCV(List<Guid> cvPublicIds, string? positionPublicId, int? departmentId = null)
         {
             if (departmentId == null && positionPublicId == null)
                 return Forbid();
@@ -144,8 +144,10 @@ namespace CVexplorer.Controllers
                 if (!await IsUserAuthorizedAsync(null, null, departmentId))
                     return Forbid();
             }
-            
-            return Ok(await _cvRepository.DeleteCVsAsync(cvPublicIds, positionPublicId, departmentId));
+
+            var result = await _cvRepository.DeleteCVsAsync(cvPublicIds, positionPublicId, departmentId);
+
+            return Ok(result);
         }
         
 

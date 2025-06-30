@@ -56,9 +56,9 @@ namespace CVexplorer.Repositories.Implementation
                 .ToListAsync();
         }
 
-        public async Task<bool> DeleteCVsAsync(List<Guid> cvPublicIds, string? positionPublicId = null, int? departmentId = null)
+        public async Task<object> DeleteCVsAsync(List<Guid> cvPublicIds, string? positionPublicId = null, int? departmentId = null)
         {
-            var query = _context.CVs.Include(cv => cv.RoundEntries).AsQueryable();
+            var query = _context.CVs.Include(cv => cv.RoundEntries).Include(cv => cv.Evaluation).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(positionPublicId))
             {
@@ -74,14 +74,43 @@ namespace CVexplorer.Repositories.Implementation
             query = query.Where(cv => cvPublicIds.Contains(cv.PublicId));
 
             var cvsToDelete = await query.ToListAsync();
-
             if (!cvsToDelete.Any())
-                return false;
+                return new { Success = false};
 
-            _context.CVs.RemoveRange(cvsToDelete);
-            await _context.SaveChangesAsync();
+            var skipped = cvsToDelete
+           .Where(cv => cv.RoundEntries.Any())
+           .ToList();
 
-            return true;
+            var toDelete = cvsToDelete
+           .Where(cv => !cv.RoundEntries.Any())
+           .ToList();
+
+            if (toDelete.Any())
+            {
+                var evals = toDelete
+                    .Where(cv => cv.Evaluation != null)
+                    .Select(cv => cv.Evaluation!)
+                    .ToList();
+                _context.Set<CvEvaluationResult>().RemoveRange(evals);
+
+                _context.CVs.RemoveRange(toDelete);
+
+                await _context.SaveChangesAsync();
+            }
+
+            if (skipped.Any())
+            {
+                return new
+                {
+                    Success = true,
+                    Message = "Some CVs are linked to existing rounds and cannot be deleted. To delete these CVs, please remove the associated rounds first.",
+                };                    
+            }
+
+            return new 
+            { 
+                Success = true
+            };
         }
 
         public async Task<bool> UploadDocumentAsync(IFormFile file, string positionPublicId, int userId , int? roundId = null, string? uploadMethod = "Manual")
