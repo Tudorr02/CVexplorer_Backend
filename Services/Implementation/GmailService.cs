@@ -12,10 +12,7 @@ using Microsoft.AspNetCore.Identity;
 using CVexplorer.Models.Domain;
 using CVexplorer.Repositories.Interface;
 using Google.Apis.Gmail.v1;
-using CVexplorer.Repositories.Implementation;
-using CVexplorer.Controllers;
-using Azure;
-using System;
+
 
 namespace CVexplorer.Services.Implementation
 {
@@ -141,14 +138,12 @@ namespace CVexplorer.Services.Implementation
             Round actualRound;
             if (!string.IsNullOrWhiteSpace(roundId))
             {
-                // Dacă roundId e dat, îl încarc din baza de date
                 actualRound = await _context.Rounds
                     .SingleOrDefaultAsync(r => r.PublicId == roundId)
                     ?? throw new Exception($"Round with PublicId {roundId} does not exist");
             }
             else
             {
-                // Dacă nu e dat, creez unul nou
                 actualRound = await _roundRepository.CreateAsync(position.Id);
             }
 
@@ -233,13 +228,11 @@ namespace CVexplorer.Services.Implementation
                     sub.RoundId = actualRound.Id;
                 }
 
-                // setăm token-ul și expirarea
                 sub.SyncToken = watchResp.HistoryId.ToString();
                 sub.ExpiresAt = DateTimeOffset.UtcNow.AddMilliseconds((double)watchResp.Expiration);
                 sub.UpdatedAt = DateTimeOffset.UtcNow;
             }
 
-            // 7. Salvăm toate modificările odată
             await _context.SaveChangesAsync();
 
             var allLabels = await gmailSvc.Users.Labels.List("me").ExecuteAsync();
@@ -272,7 +265,6 @@ namespace CVexplorer.Services.Implementation
                 ApplicationName = _config["Google:ApplicationName"]
             });
 
-            // Oprire watch complet (Gmail API nu suportă unwatch per label)
             await gmailSvc.Users.Stop("me").ExecuteAsync();
 
             var existingSubs = await _context.IntegrationSubscriptions
@@ -418,7 +410,6 @@ namespace CVexplorer.Services.Implementation
             if (long.TryParse(expiresAtStr, out var unix))
             {
                 var dto = DateTimeOffset.FromUnixTimeSeconds(unix);
-                // obținem stringul ISO 8601, ex: "2025-05-30T14:23:45.0000000Z"
                 expiry = dto.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffK");
             }
 

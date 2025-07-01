@@ -1,25 +1,17 @@
-﻿using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using Microsoft.AspNetCore.Authentication;
+﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Graph;
 using System.Security.Claims;
-using CVexplorer.Models.Domain;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Identity.Client;
 using System.Net.Http.Headers;
-using Microsoft.Identity.Client.Extensions.Msal;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using CVexplorer.Data;
 using CVexplorer.Repositories.Interface;
 using System.Text.Json;
-using Microsoft.AspNetCore.SignalR;
-using CVexplorer.Repositories.Implementation;
 using CVexplorer.Models.DTO;
 using CVexplorer.Services.Interface;
-using System.Text.RegularExpressions;
-using Microsoft.Identity.Client.Platforms.Features.DesktopOs.Kerberos;
 
 namespace CVexplorer.Controllers
 {
@@ -92,7 +84,6 @@ namespace CVexplorer.Controllers
             if (jwtUserId == null || cookieUserId == null || jwtUserId != cookieUserId)
                 return Forbid();
 
-            // 1) Obținem token-urile (va face refresh dacă e nevoie)
             var tokens = await _oService.GetOrRefreshTokensAsync(jwtUserId);
 
             if (tokens == null)
@@ -279,7 +270,6 @@ namespace CVexplorer.Controllers
 
             await _oService.Disconnect ( userId, tokens);
 
-            // 🔁 Șterge tokenurile Gmail salvate în Identity
             Response.Cookies.Delete("Microsoft.Auth", new CookieOptions
             {
                 Path = "/",
@@ -313,7 +303,6 @@ namespace CVexplorer.Controllers
                                         .Request()
                                         .GetAsync();
 
-            // 3) Accumulate pages
             allSubs.AddRange(page.CurrentPage);
             while (page.NextPageRequest != null)
             {

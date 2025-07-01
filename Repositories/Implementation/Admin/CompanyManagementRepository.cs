@@ -24,16 +24,14 @@ namespace CVexplorer.Repositories.Implementation.Admin
             }).ToList();
         }
       
-        // ✅ Update a company
         public async Task<CompanyManagementDTO> UpdateCompanyAsync(int companyId, CompanyManagementDTO dto)
         {
             var company = await _context.Companies
                 .Include(c => c.Departments)
                 .FirstOrDefaultAsync(c => c.Id == companyId);
 
-            if (company == null) throw new NotFoundException("Company not found !"); // ✅ Return null if company doesn't exist
+            if (company == null) throw new NotFoundException("Company not found !"); 
 
-            // ✅ Check if another company already exists with the same name
             bool nameExists = await _context.Companies
                 .AnyAsync(c => c.Name.ToLower() == dto.Name.ToLower() && c.Id != companyId);
 
@@ -45,7 +43,6 @@ namespace CVexplorer.Repositories.Implementation.Admin
 
             if(dto.Name != company.Name)
             {
-                // ✅ Update the company name
                 company.Name = dto.Name;
 
                 _context.Companies.Update(company);
@@ -53,14 +50,12 @@ namespace CVexplorer.Repositories.Implementation.Admin
             }
 
           
-
-            // ✅ Return the updated company details
             return new CompanyManagementDTO
             {
                 Name = company.Name
             };
         }
-        // ✅ Delete a company
+
         public async Task<bool> DeleteCompanyAsync(int companyId)
         {
             var company = await _context.Companies.Include(c => c.Users).FirstOrDefaultAsync(c => c.Id == companyId);

@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using CVexplorer.Models.Domain;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 
 namespace CVexplorer.Controllers
 {
@@ -50,11 +49,9 @@ namespace CVexplorer.Controllers
             if (department == null)
                 return false;
 
-            // ✅ Verificare companie
             if (department.CompanyId != user.CompanyId)
                 return false;
 
-            // ✅ Dacă este HRUser, verificăm accesul la departament
             if (User.IsInRole("HRUser"))
             {
                 bool hasDepartmentAccess = user.UserDepartmentAccesses.Any(a => a.DepartmentId == department.Id);
@@ -103,8 +100,16 @@ namespace CVexplorer.Controllers
             if (!await IsUserAuthorizedAsync(publicId))
                 return Forbid();
 
-            var deleted = await _positionRepository.DeletePositionAsync(publicId);
-            if (!deleted) return NotFound();
+            try
+            {
+                var deleted = await _positionRepository.DeletePositionAsync(publicId);
+                if (!deleted) return NotFound();
+
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
             return NoContent();
         }
     }

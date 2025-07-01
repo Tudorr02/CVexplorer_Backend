@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CVexplorer.Controllers
 {
 
-    [Authorize] // ✅ Ensure user is authenticated
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class RolesController(DataContext _context, UserManager<User> _userManager) : Controller
@@ -18,14 +18,14 @@ namespace CVexplorer.Controllers
         {
             try
             {
-                // ✅ Get the logged-in user
+                
                 var user = await _userManager.GetUserAsync(User);
                 if (user == null)
                 {
                     return Unauthorized(new { error = "User not found or not authenticated." });
                 }
 
-                // ✅ Get the roles assigned to the user
+                
                 var userRoles = await _userManager.GetRolesAsync(user);
 
                 if (userRoles.Count == 1 && userRoles.Contains("HRUser"))
@@ -33,10 +33,9 @@ namespace CVexplorer.Controllers
                     return Unauthorized(new { error = "You are not allowed to view roles." });
                 }
 
-                // ✅ Fetch all roles
+                
                 var rolesQuery = _context.Roles.AsQueryable();
 
-                // ✅ If user has "HRLeader" role, exclude "Admin" and "Moderator"
                 if (userRoles.Contains("HRLeader"))
                 {
                     rolesQuery = rolesQuery.Where(r => r.Name != "Admin" && r.Name != "Moderator");

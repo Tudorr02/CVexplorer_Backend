@@ -83,7 +83,9 @@ namespace CVexplorer.Repositories.Implementation
         public async Task DeleteAsync(string publicId)
         {
             var round = await _context.Rounds
+                .Include(r => r.IntegrationSubscriptions)
                 .FirstOrDefaultAsync(r => r.PublicId == publicId);
+
             if (round != null)
             {
                 _context.Rounds.Remove(round);
@@ -105,7 +107,7 @@ namespace CVexplorer.Repositories.Implementation
             }
 
             var dto = round.Stages
-                .OrderBy(s => s.Ordinal)         // (opțional) ca să fie ordonate după Ordinal
+                .OrderBy(s => s.Ordinal)        
                 .Select(s => new RoundStageDTO
                 {
                     Name = s.Name,
@@ -115,7 +117,7 @@ namespace CVexplorer.Repositories.Implementation
                         .Select(e => new RoundEntryListDTO
                         {
                             Id = e.Id,
-                            CandidateName = e.Cv.FileName,  // sau e.Cv.CandidateName, depinde cum ai definit CV-ul
+                            CandidateName = e.Cv.FileName,  
                             Score = Convert.ToInt16(e.Cv.Score)
                         })
                         .ToList()

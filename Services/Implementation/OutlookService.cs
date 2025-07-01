@@ -1,11 +1,8 @@
 ﻿using CVexplorer.Data;
 using CVexplorer.Models.Domain;
 using CVexplorer.Models.DTO;
-using CVexplorer.Repositories.Implementation;
 using CVexplorer.Repositories.Interface;
 using CVexplorer.Services.Interface;
-using iText.Commons.Bouncycastle.Cert.Ocsp;
-using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Graph;
@@ -47,7 +44,6 @@ namespace CVexplorer.Services.Implementation
 
             var expiresAt = DateTimeOffset.FromUnixTimeSeconds(expiresAtUnix);
 
-            // 3) Dacă accesul e expirat, facem refresh
             if (expiresAt <= DateTimeOffset.UtcNow)
             {
                 
@@ -88,7 +84,6 @@ namespace CVexplorer.Services.Implementation
                 await _userManager.SetAuthenticationTokenAsync(user, provider, "expires_at", expiresAt.ToUnixTimeSeconds().ToString());
             }
 
-            // 5) Returnăm întotdeauna un TokenResult valid
             return new TokenResult
             {
                 AccessToken = accessToken,
@@ -119,7 +114,6 @@ namespace CVexplorer.Services.Implementation
             }
             var position = _context.Positions.First(p => p.PublicId == publicPosId);
 
-            // 4) Load your Outlook subscriptions for that position
             var existingSubs = await _context.IntegrationSubscriptions
                 .Where(s =>
                     s.Provider == "Outlook" &&
@@ -156,7 +150,6 @@ namespace CVexplorer.Services.Implementation
                 return Task.CompletedTask;
             }));
 
-            // 5) Luăm subscripțiile deja salvate în DB
             var existingSubs = await _context.IntegrationSubscriptions
                 .Where(s => s.UserId == user.Id
                          && s.Provider == "Outlook"
@@ -168,14 +161,12 @@ namespace CVexplorer.Services.Implementation
             Round actualRound;
             if (!string.IsNullOrWhiteSpace(roundId))
             {
-                // Dacă roundId e dat, îl încarc din baza de date
                 actualRound = await _context.Rounds
                     .SingleOrDefaultAsync(r => r.PublicId == roundId)
                     ?? throw new Exception($"Round with PublicId {roundId} does not exist");
             }
             else
             {
-                // Dacă nu e dat, creez unul nou
                 actualRound = await _roundRepository.CreateAsync(position.Id);
             }
 
@@ -186,7 +177,6 @@ namespace CVexplorer.Services.Implementation
 
             if (toRemove.Count() == existingSubs.Count && existingSubs.Count > 0)
             {
-                // Șterg fiecare subscripție de pe Graph
                 foreach (var sub in existingSubs)
                 {
                     await graphClient
@@ -230,7 +220,6 @@ namespace CVexplorer.Services.Implementation
             {
                 await _context.SaveChangesAsync();
 
-                // Returnez toate folderele cu isSubscribed = false
                 var allFoldersEmpty = new List<MailFolder>();
                 var firstPageEmpty = await graphClient.Me.MailFolders.Request().GetAsync();
                 allFoldersEmpty.AddRange(firstPageEmpty.CurrentPage);
@@ -269,7 +258,7 @@ namespace CVexplorer.Services.Implementation
                 if (string.IsNullOrEmpty(email))
                     throw new Exception("Could not retrieve email from Microsoft Graph");
 
-                var maxExp = DateTimeOffset.UtcNow.AddMinutes(4230); // ~72h
+                var maxExp = DateTimeOffset.UtcNow.AddMinutes(4230); 
 
                 foreach (var folderId in toAdd)
                 {
@@ -324,7 +313,6 @@ namespace CVexplorer.Services.Implementation
                     allFolders.AddRange(page.CurrentPage);
                 }
 
-                // 11) Which folder IDs are currently subscribed?
                 var subscribedIds = await _context.IntegrationSubscriptions
                     .Where(s =>
                         s.Provider == "Outlook" &&
@@ -353,17 +341,14 @@ namespace CVexplorer.Services.Implementation
             if (sub == null)
                 throw new InvalidOperationException($"No subscription for folder {folderId}");
 
-            // 2) Obține token-urile actualizate pentru acel user
             var tokens = await GetOrRefreshTokensAsync(sub.UserId.ToString());
 
-            // 3) Creează GraphServiceClient
             var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider(req =>
             {
                 req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokens.AccessToken);
                 return Task.CompletedTask;
             }));
 
-            // 4) Fetch mesajul cu attachments
             var msg = await graphClient.Me.Messages[messageId]
                            .Request()
                            .Select(m => new {
@@ -400,7 +385,6 @@ namespace CVexplorer.Services.Implementation
                 return;
             }
 
-            // 5) Obținem publicPositionId din Position
             var publicPositionId = await _context.Positions
                 .Where(p => p.Id == sub.PositionId)
                 .Select(p => p.PublicId)
@@ -535,7 +519,6 @@ namespace CVexplorer.Services.Implementation
             if (long.TryParse(expiresAtStr, out var unix))
             {
                 var dto = DateTimeOffset.FromUnixTimeSeconds(unix);
-                // obținem stringul ISO 8601, ex: "2025-05-30T14:23:45.0000000Z"
                 expiry = dto.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffK");
             }
 

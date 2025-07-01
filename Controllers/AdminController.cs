@@ -15,7 +15,7 @@ using Microsoft.Graph;
 
 namespace CVexplorer.Controllers
 {
-    //[Authorize(Policy = "RequireModeratorRole")]
+    [Authorize(Policy = "RequireModeratorRole")]
     [ApiController]
     [Route("api/[controller]")]
     public class AdminController(DataContext _context,UserManager<Models.Domain.User> _userManager, IDepartmentRepository _departmentManagement ,ICompanyManagementRepository _companyManagement ,IUserManagementRepository _userManagement , IMapper _mapper , ITokenService _tokenService) : Controller
@@ -47,12 +47,10 @@ namespace CVexplorer.Controllers
                 bool isModerator = await _userManager.IsInRoleAsync(currentUser, "Moderator");
 
 
-                // ✅ Prevent Moderators from assigning Admin role
                 if (isModerator && dto.UserRole.Equals("Admin"))
                     return Forbid("You are not allowed to assign the Admin role.");
                 
 
-                // ✅ Prevent modifications to the built-in "admin" user
                 var userToUpdate = await _userManager.FindByIdAsync(userId.ToString());
                 if (userToUpdate == null)
                 {
@@ -64,15 +62,15 @@ namespace CVexplorer.Controllers
                 }
 
                 var updatedUser = await _userManagement.UpdateUserAsync(userId,dto);
-                return Ok(updatedUser); // Returns updated user details
+                return Ok(updatedUser); 
             }
             catch (NotFoundException ex)
             {
-                return NotFound(new { error = ex.Message }); // 404 if user or company not found
+                return NotFound(new { error = ex.Message });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { error = ex.Message }); //  400 for other failures
+                return BadRequest(new { error = ex.Message });
             }
         }
 
@@ -90,7 +88,7 @@ namespace CVexplorer.Controllers
 
                 if (userToDelete.UserName?.ToLower() == "admin")
                 {
-                    return Forbid(); // Prevent deletion of the "admin" user
+                    return Forbid();
                 }
 
                 var cvs = await _context.CVs
@@ -100,15 +98,15 @@ namespace CVexplorer.Controllers
                 await _context.SaveChangesAsync();
 
                 await _userManager.DeleteAsync(userToDelete);
-                return Ok(); // Returns deleted user details
+                return Ok();
             }
             catch (NotFoundException ex)
             {
-                return NotFound(new { error = ex.Message }); // 404 if user not found
+                return NotFound(new { error = ex.Message });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { error = ex.Message }); //  400 for other failures
+                return BadRequest(new { error = ex.Message });
             }
         }
 
@@ -117,11 +115,6 @@ namespace CVexplorer.Controllers
         {
             try
             {
-                //var currentUser = await _userManager.GetUserAsync(User);
-
-                //if (currentUser == null)
-                //    return Unauthorized(new { error = "User not found or not authenticated." });
-
                 var result = await _userManagement.EnrollUserAsync(dto);
                 return Ok(result);
             }
@@ -158,15 +151,15 @@ namespace CVexplorer.Controllers
             try
             {
                 var updatedCompany = await _companyManagement.UpdateCompanyAsync(companyId, dto);
-                return Ok(updatedCompany); // Returns updated company details
+                return Ok(updatedCompany);
             }
             catch (NotFoundException ex)
             {
-                return NotFound(new { error = ex.Message }); // 404 if company not found
+                return NotFound(new { error = ex.Message });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { error = ex.Message }); //  400 for other failures
+                return BadRequest(new { error = ex.Message });
             }
         }
 
@@ -176,15 +169,15 @@ namespace CVexplorer.Controllers
             try
             {
                 var isDeleted = await _companyManagement.DeleteCompanyAsync(companyId);
-                return Ok(isDeleted); // Returns true if company is deleted
+                return Ok(isDeleted);
             }
             catch (NotFoundException ex)
             {
-                return NotFound(new { error = ex.Message }); // 404 if company not found
+                return NotFound(new { error = ex.Message });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { error = ex.Message }); //  400 for other failures
+                return BadRequest(new { error = ex.Message });
             }
         }
 
@@ -193,7 +186,6 @@ namespace CVexplorer.Controllers
         {
             try
             {
-                // Check if a company with the same name already exists
                 var existingCompany = await _context.Companies
                     .FirstOrDefaultAsync(c => c.Name.ToLower() == dto.Name.ToLower());
 
@@ -203,11 +195,11 @@ namespace CVexplorer.Controllers
                 }
 
                 var company = await _companyManagement.CreateCompanyAsync(dto);
-                return Ok(company); // Returns created company details
+                return Ok(company);
             }
             catch (Exception ex)
             {
-                return BadRequest(new { error = ex.Message }); //  400 for other failures
+                return BadRequest(new { error = ex.Message });
             }
         }
         

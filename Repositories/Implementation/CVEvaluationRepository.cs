@@ -5,7 +5,6 @@ using CVexplorer.Models.DTO;
 using CVexplorer.Models.Primitives;
 using CVexplorer.Repositories.Interface;
 using CVexplorer.Services.Interface;
-using iText.StyledXmlParser.Jsoup.Select;
 using Microsoft.EntityFrameworkCore;
 
 namespace CVexplorer.Repositories.Implementation

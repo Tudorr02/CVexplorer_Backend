@@ -48,30 +48,26 @@ namespace CVexplorer.Repositories.Implementation.Admin
                 throw new NotFoundException("User not found");
             }
 
-            bool hasChanges = false; // ✅ Track if any update was made
+            bool hasChanges = false;
 
-            // ✅ Update FirstName
             if (!string.IsNullOrWhiteSpace(dto.FirstName) && !dto.FirstName.Equals(user.FirstName))
             {
                 user.FirstName = dto.FirstName;
                 hasChanges = true;
             }
 
-            // ✅ Update LastName
             if (!string.IsNullOrWhiteSpace(dto.LastName) && !dto.LastName.Equals(user.LastName))
             {
                 user.LastName = dto.LastName;
                 hasChanges = true;
             }
 
-            // ✅ Update Email
             if (!string.IsNullOrWhiteSpace(dto.Email) && !dto.Email.Equals(user.Email))
             {
                 user.Email = dto.Email;
                 hasChanges = true;
             }
 
-            // ✅ Update Company (if provided)
             if (!string.IsNullOrWhiteSpace(dto.CompanyName) &&
                 (user.Company == null || !dto.CompanyName.Equals(user.Company.Name)))
             {
@@ -86,7 +82,6 @@ namespace CVexplorer.Repositories.Implementation.Admin
                 hasChanges = true;
             }
 
-            // ✅ Update User Roles (if provided)
             if (!string.IsNullOrWhiteSpace(dto.UserRole))
             {
                 var currentRole = user.UserRoles.FirstOrDefault()?.Role?.Name;
@@ -97,7 +92,6 @@ namespace CVexplorer.Repositories.Implementation.Admin
                     {
                         user.UserRoles.Clear();
 
-                        // ✅ Validate the new role exists
                         var validRoles = await _context.Roles.Select(r => r.Name).ToListAsync();
                         if (!validRoles.Contains(dto.UserRole))
                         {
@@ -119,7 +113,6 @@ namespace CVexplorer.Repositories.Implementation.Admin
               
             }
 
-            // ✅ Update user only if changes were made
             if (hasChanges)
             {
                 var result = await _userManager.UpdateAsync(user);
@@ -177,7 +170,6 @@ namespace CVexplorer.Repositories.Implementation.Admin
             if (await UserExists(dto.Username.ToLower()))
                 throw new ArgumentException("Username is taken");
 
-            // ✅ Validate company before creating user
             int? companyId = null;
             if (!string.IsNullOrWhiteSpace(dto.CompanyName))
             {
@@ -185,19 +177,17 @@ namespace CVexplorer.Repositories.Implementation.Admin
                 if (company == null)
                     throw new ArgumentException($"Company '{dto.CompanyName}' not found");
 
-                companyId = company.Id; // ✅ Store company ID
+                companyId = company.Id;
             }
 
-            // ✅ Validate roles before creating user
             var roleToAssign = string.IsNullOrWhiteSpace(dto.UserRole) ? "HRUser" : dto.UserRole;
             var validRoles = await _context.Roles.Select(r => r.Name).ToListAsync();
             if (!validRoles.Contains(roleToAssign))
                 throw new ArgumentException($"Invalid role: {roleToAssign}");
 
-            // ✅ Create the user only after validations pass
             var user = _mapper.Map<User>(dto);
             user.UserName = dto.Username;
-            user.CompanyId = companyId; // ✅ Assign validated company
+            user.CompanyId = companyId;
 
             var result = await _userManager.CreateAsync(user, dto.Password);
             if (!result.Succeeded)

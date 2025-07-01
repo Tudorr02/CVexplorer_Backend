@@ -1,7 +1,6 @@
 ﻿using CVexplorer.Data;
 using CVexplorer.Models.Domain;
 using CVexplorer.Models.DTO;
-using CVexplorer.Repositories.Implementation;
 using CVexplorer.Repositories.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;

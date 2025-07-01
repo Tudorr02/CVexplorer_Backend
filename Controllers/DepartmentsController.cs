@@ -43,10 +43,7 @@ namespace CVexplorer.Controllers
         {
             try
             {
-
-                // ✅ Retrieve the user entity from the database
                 var user = await _userManager.GetUserAsync(User);
-
 
                 if (user == null) return Unauthorized("User not found!");
 
@@ -71,7 +68,6 @@ namespace CVexplorer.Controllers
         }
 
 
-        /** ✅ GET a specific department */
         [HttpGet("{departmentId}")]
         public async Task<ActionResult<DepartmentDTO>> GetDepartment(int departmentId)
         {
@@ -100,14 +96,12 @@ namespace CVexplorer.Controllers
 
                 if (user == null) return Unauthorized("User not found!");
 
-                // ✅ Check if the user belongs to the same company
                 if (user.CompanyId == null)
                 {
                     return StatusCode(StatusCodes.Status403Forbidden, new { message = "You are not assigned to a company." });
                 }
 
 
-                // ✅ Check if department already exists in the company
                 bool departmentExists = await _context.Departments
                     .AnyAsync(d => d.CompanyId == user.CompanyId && d.Name == dto.Name);
 
@@ -140,18 +134,15 @@ namespace CVexplorer.Controllers
             try
             {
 
-                // ✅ Retrieve the user entity from the database
                 var user = await _userManager.GetUserAsync(User);
 
                 if (user == null) return Unauthorized("User not found!");
 
-                // ✅ Check if the user belongs to a company
                 if (user.CompanyId == null)
                 {
                     return StatusCode(StatusCodes.Status403Forbidden, new { message = "You are not assigned to a company." });
                 }
 
-                // ✅ Call repository method to update the department
                 var updatedDepartment = await _departmentManagement.UpdateDepartmentAsync(departmentId, (int)user.CompanyId, dto);
 
                 if (updatedDepartment == null)
@@ -182,12 +173,9 @@ namespace CVexplorer.Controllers
             try
             {
 
-                // ✅ Retrieve the user entity from the database
                 var user = await _userManager.GetUserAsync(User);
-
                 if (user == null) return Unauthorized("User not found!");
 
-                // ✅ Check if the user belongs to the same company
                 if (user.CompanyId == null)
                 {
                     return StatusCode(StatusCodes.Status403Forbidden, new { message = "You are not assigned to a company." });
@@ -205,6 +193,10 @@ namespace CVexplorer.Controllers
                 if (!success) return BadRequest(new { message = "Failed to delete department." });
 
                 return Ok(new { message = "Department deleted successfully." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
             catch (NotFoundException ex)
             {

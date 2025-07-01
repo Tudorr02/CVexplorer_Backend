@@ -10,9 +10,9 @@ namespace CVexplorer.Helpers
         {
             CreateMap<User, AccountDTO>();
             CreateMap<UserEnrollDTO, User>()
-                .ForMember(dest => dest.UserRoles, opt => opt.Ignore())// ❌ Ignore roles, handled separately
-                .ForMember(dest => dest.CompanyId, opt => opt.Ignore()) // ❌ Ignore CompanyId, set it in repository
-                .ForMember(dest => dest.Company, opt => opt.Ignore());  // ❌ Ignore Company object, set it in repository
+                .ForMember(dest => dest.UserRoles, opt => opt.Ignore())
+                .ForMember(dest => dest.CompanyId, opt => opt.Ignore())
+                .ForMember(dest => dest.Company, opt => opt.Ignore());
 
             CreateMap<LoginDTO, User>();
             CreateMap<Position, PositionPayloadInputDTO>()

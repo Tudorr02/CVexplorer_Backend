@@ -10,8 +10,6 @@ using System.Text;
 using System.Text.Json;
 using CVexplorer.Services.Interface;
 using CVexplorer.Models.DTO;
-using CVexplorer.Repositories.Interface;
-using Microsoft.EntityFrameworkCore;
 
 namespace CVexplorer.Controllers
 {
@@ -55,7 +53,6 @@ namespace CVexplorer.Controllers
 
             await _gService.Disconnect(jwtUserId);
 
-            // 🔁 Șterge tokenurile Gmail salvate în Identity
             Response.Cookies.Delete("Google.Auth", new CookieOptions
             {
                 Path = "/",

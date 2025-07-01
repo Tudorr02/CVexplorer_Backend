@@ -23,7 +23,6 @@ namespace CVexplorer.Controllers
             if (user == null)
                 return Unauthorized("User not found");
 
-            // 2. Dacă exista, dar nu are companie, întoarcem toate nivelele cu 0 candidați
             var allLevels = Enum
                 .GetValues(typeof(PositionLevel))
                 .Cast<PositionLevel>()
@@ -35,7 +34,6 @@ namespace CVexplorer.Controllers
                 return Ok(emptyResult);
             }
 
-            // 3. Construim query-ul și aplicăm filtrele doar dacă parametrii sunt prezenți
             var companyId = user.CompanyId.Value;
             var query = _context.CVs
                 .Include(c => c.Position)
@@ -50,12 +48,10 @@ namespace CVexplorer.Controllers
             if (departmentId.HasValue)
                 query = query.Where(c => c.Position.DepartmentId == departmentId.Value);
 
-            // 4. Grupăm după level-ul din Evaluare și calculăm numărul de CV-uri
             var levelList = await query
              .Select(c => c.Evaluation.Level.Value)
-             .ToListAsync();  // acum levelList e List<PositionLevel>
+             .ToListAsync();
 
-            // 2. Grupează în memorie şi calculează count-ul
             var rawCounts = levelList
                 .GroupBy(lvl => lvl)
                 .Select(g => new
@@ -65,13 +61,11 @@ namespace CVexplorer.Controllers
                 })
                 .ToList();
 
-            // 5. Completăm cu 0 acolo unde nu există aplicanți
             var result = allLevels.ToDictionary(
                 level => level,
                 level => rawCounts.FirstOrDefault(rc => rc.Level.ToString() == level)?.Count ?? 0
             );
 
-            // 6. Returnăm JSON de forma { "Intern": 0, "Junior": 0, … } sau cu valorile reale
             return Ok(result);
         }
 

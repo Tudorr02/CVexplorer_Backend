@@ -93,7 +93,7 @@ namespace CVexplorer.Controllers
                 if (!await IsUserAuthorizedAsync(publicPositionId, null, null))
                     return Forbid();
             }
-            // 3) Else if filtering by department, enforce department‐level auth
+
             else if (departmentId != null)
             {
                 if (!await IsUserAuthorizedAsync(null , null , departmentId.Value))

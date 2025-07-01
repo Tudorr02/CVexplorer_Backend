@@ -2,7 +2,6 @@
 using CVexplorer.Exceptions;
 using CVexplorer.Models.DTO;
 using CVexplorer.Repositories.Interface;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 

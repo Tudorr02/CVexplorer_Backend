@@ -20,7 +20,7 @@ namespace CVexplorer.Repositories.Implementation
                 .ThenInclude(ur => ur.Role)
                 .ToListAsync();
 
-            return users  // ✅ Use `companyId` instead of `companyName`
+            return users 
                .Select(u => new UserListDTO
                {
                    Id = u.Id,
@@ -46,23 +46,20 @@ namespace CVexplorer.Repositories.Implementation
                 throw new NotFoundException("User not found");
             }
 
-            bool hasChanges = false; // ✅ Track if any update was made
+            bool hasChanges = false;
 
-            // ✅ Update FirstName
             if (!string.IsNullOrWhiteSpace(dto.FirstName) && !dto.FirstName.Equals(user.FirstName))
             {
                 user.FirstName = dto.FirstName;
                 hasChanges = true;
             }
 
-            // ✅ Update LastName
             if (!string.IsNullOrWhiteSpace(dto.LastName) && !dto.LastName.Equals(user.LastName))
             {
                 user.LastName = dto.LastName;
                 hasChanges = true;
             }
 
-            // ✅ Update Email
             if (!string.IsNullOrWhiteSpace(dto.Email) && !dto.Email.Equals(user.Email))
             {
                 user.Email = dto.Email;
@@ -132,7 +129,6 @@ namespace CVexplorer.Repositories.Implementation
                 throw new NotFoundException("User not found.");
             }
 
-            // ✅ Prevent deletion of Admins or Moderators
             var userRole = user.UserRoles.FirstOrDefault().Role?.Name;
 
             if (userRole.Equals("Admin") || userRole.Equals("Moderator"))
@@ -159,7 +155,6 @@ namespace CVexplorer.Repositories.Implementation
                 throw new ValidationException("Username is already taken.");
             
 
-            // ✅ Validate roles before creating user
             var roleToAssign = string.IsNullOrWhiteSpace(dto.UserRole) ? "HRUser" : dto.UserRole;
             var validRoles = await _context.Roles.Select(r => r.Name).ToListAsync();
             if (!validRoles.Contains(roleToAssign))

@@ -29,7 +29,7 @@ namespace CVexplorer.Repositories.Implementation
         public async Task<bool> UpdateAsync(int reId, int targetStageOrdinal)
         {
             var roundEntry = await _context.RoundEntries
-            .Include(re => re.Stage)            // Include-ul ne ajută să avem acces la roundEntry.Stage.RoundId
+            .Include(re => re.Stage)            
             .FirstOrDefaultAsync(re => re.Id == reId);
             if (roundEntry == null) return false;
 

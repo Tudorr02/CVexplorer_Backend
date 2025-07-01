@@ -17,17 +17,13 @@ namespace CVexplorer.Models.DTO
         [JsonPropertyName("data")]
         public string Data { get; set; }
 
-        //[JsonPropertyName("attributes")]
-        //public IDictionary<string, string> Attributes { get; set; }
 
-        // câmpurile camelCase pe care le foloseai deja
         [JsonPropertyName("messageId")]
         public string MessageId { get; set; }
 
         [JsonPropertyName("publishTime")]
         public string PublishTime { get; set; }
 
-        // PLUS cele cu underscore din JSON
         [JsonPropertyName("message_id")]
         public string message_id { get; set; }
 

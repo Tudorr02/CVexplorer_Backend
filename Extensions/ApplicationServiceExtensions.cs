@@ -8,15 +8,6 @@ using CVexplorer.Services.Interface;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 
-using Google.Apis.Gmail.v1;
-using Google.Apis.Auth.AspNetCore3;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.Google;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Google.Apis.Services;
-using System.Net;
-using CVexplorer.Controllers;
 
 namespace CVexplorer.Extensions
 {

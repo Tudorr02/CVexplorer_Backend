@@ -54,21 +54,17 @@ namespace CVexplorer.Repositories.Implementation
                 ? round.Stages.Max(s => s.Ordinal) + 1
                 : 0;
 
-            // 3. Construim noul RoundStage
             var newStage = new RoundStage
             {
                 RoundId = round.Id,
-                // Generăm un PublicId unic (de exemplu "RS" + primele 10 caractere dintr-un GUID)
                 Name = name,
                 Ordinal = nextOrdinal,
                 IsActive = true
             };
 
-            // 4. Adăugăm în context și salvăm
             _context.RoundStages.Add(newStage);
             await _context.SaveChangesAsync();
 
-            // 5. Proiectăm spre DTO și returnăm
             var dto = new RoundStageDTO
             {
 
@@ -83,7 +79,6 @@ namespace CVexplorer.Repositories.Implementation
 
         public async Task DeleteLastAsync(string roundPublicId, int ordinal)
         {
-            // 1. Găsește etapa de șters, incluzând intrările sale și ID-ul rundei
             var stageToDelete = await _context.RoundStages
                 .Include(s => s.Entries)
                 .Include(s => s.Round)
@@ -94,20 +89,16 @@ namespace CVexplorer.Repositories.Implementation
             if (stageToDelete == null)
                 throw new ArgumentException($"RoundStage cu Ordinal = {ordinal} pentru Round '{roundPublicId}' nu există.");
 
-            // 2. Găsește valoarea maximă de Ordinal în acea rundă
             var maxOrdinal = await _context.RoundStages
                 .Where(s => s.RoundId == stageToDelete.RoundId)
                 .MaxAsync(s => s.Ordinal);
 
-            // 3. Verifică dacă aceasta e ultima etapă (ordinal == maxOrdinal)
             if (ordinal != maxOrdinal)
                 throw new InvalidOperationException("Se poate șterge doar ultima etapă (ultima în ordinea Ordinal).");
 
-            // 4. Dacă e singura etapă (ordinal == 0 și maxOrdinal == 0), nu o putem șterge
             if (ordinal == 0 && maxOrdinal == 0)
                 throw new InvalidOperationException("Nu se poate șterge singura etapă rămasă în rundă.");
 
-            // 5. Găsește etapa precedentă (cea cu ordinal = maxOrdinal - 1)
             var previousStage = await _context.RoundStages
                 .FirstOrDefaultAsync(s =>
                     s.RoundId == stageToDelete.RoundId &&
@@ -117,16 +108,12 @@ namespace CVexplorer.Repositories.Implementation
                 throw new InvalidOperationException(
                     $"Nu s-a găsit etapa cu Ordinal = {maxOrdinal - 1} în Round '{roundPublicId}'.");
 
-            // 6. Mută toate RoundEntry-urile din etapa curentă în etapa precedentă
             foreach (var entry in stageToDelete.Entries)
             {
                 entry.StageId = previousStage.Id;
             }
 
-            // 7. Șterge etapa
             _context.RoundStages.Remove(stageToDelete);
-
-            // 8. Salvează modificările
             await _context.SaveChangesAsync();
         }
 

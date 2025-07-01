@@ -3,22 +3,14 @@ using CVexplorer.Models.Domain;
 using CVexplorer.Models.DTO;
 using CVexplorer.Repositories.Interface;
 using Microsoft.EntityFrameworkCore;
-using SharpCompress.Archives.Rar;
 using SharpCompress.Archives;
-using SharpCompress.Common;
-
-using System.IO.Compression;
 
 using iText.Kernel.Pdf;
 using iText.Kernel.Pdf.Canvas.Parser;
 using iText.Kernel.Pdf.Canvas.Parser.Listener;
 using System.Text;
 
-using System.Text.Json;
-using iText.StyledXmlParser.Jsoup.Select;
-using CVexplorer.Services.Interface;
-using CVexplorer.Enums;
-using CVexplorer.Models.Primitives;
+
 
 
 

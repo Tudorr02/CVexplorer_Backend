@@ -19,7 +19,6 @@ namespace CVexplorer.Repositories.Implementation
 
             var roles = await userManager.GetRolesAsync(user);
 
-            // Get the first (and only) role
             var role = roles.FirstOrDefault();
 
             var claims = new List<Claim>

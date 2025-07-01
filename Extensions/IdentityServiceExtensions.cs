@@ -2,7 +2,6 @@
 using CVexplorer.Models.Domain;
 using Google.Apis.Gmail.v1;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -10,11 +9,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using ProjectName.Data.Seeders;
-using System.Security.Claims;
 using System.Text;
-using Microsoft.Identity.Web;
-using Microsoft.AspNetCore.CookiePolicy;
-using System.Text.Json;
+
 
 namespace CVexplorer.Extensions
 {
@@ -26,8 +22,8 @@ namespace CVexplorer.Extensions
             services.AddIdentityCore<User>(opt =>
             {
                 opt.Password.RequireNonAlphanumeric = false;
-                opt.Password.RequiredLength = 5;             // Set the minimum password length
-                opt.Password.RequireUppercase = false;       // Optional: Disable uppercase requirement
+                opt.Password.RequiredLength = 5;             
+                opt.Password.RequireUppercase = false;       
                 opt.Password.RequireDigit = false;
 
             })
@@ -114,7 +110,7 @@ namespace CVexplorer.Extensions
 
                     options.Events.OnRedirectToAuthorizationEndpoint = context =>
                     {
-                        // the context.RedirectUri has all the standard parameters
+                        
                         var uri = context.RedirectUri
                                   + "&access_type=offline"
                                   + "&prompt=consent";
@@ -138,13 +134,13 @@ namespace CVexplorer.Extensions
                         {
                             await userManager.SetAuthenticationTokenAsync(
                                 user,
-                                GoogleDefaults.AuthenticationScheme, // provider
-                                "refresh_token",                     // numele tokenului
+                                GoogleDefaults.AuthenticationScheme, 
+                                "refresh_token",                     
                                 refreshToken
                             );
                         }
 
-                        // 2) Access token (opțional, dar util)
+                       
                         var accessToken = ctx.Properties.GetTokenValue("access_token");
                         if (!string.IsNullOrEmpty(accessToken))
                         {
@@ -156,7 +152,6 @@ namespace CVexplorer.Extensions
                             );
                         }
 
-                        // 3) Expiration (pentru a şti când expiră access_token)
                         var expiresAt = ctx.Properties.GetTokenValue("expires_at");
                         if (!string.IsNullOrEmpty(expiresAt) && DateTimeOffset.TryParse(expiresAt, out var expiresAtDto))
                         {
@@ -177,11 +172,9 @@ namespace CVexplorer.Extensions
                             ctx.Properties
                             );
 
-                        // 3) Redirectezi unde vrei
                         var redirectUri = ctx.ReturnUri ?? "/";
                         ctx.HttpContext.Response.Redirect(redirectUri);
 
-                        // 4) Blochezi pipeline-ul implicit ca să nu fie dublă redirecționare
                         ctx.HandleResponse();
 
                     };
@@ -193,7 +186,6 @@ namespace CVexplorer.Extensions
                         options.Authority = $"{configuration["Microsoft:AzureAd:Instance"]}{configuration["Microsoft:AzureAd:TenantId"]}/v2.0";
                         options.ClientId = configuration["Microsoft:AzureAd:ClientId"];
                         options.ClientSecret = configuration["Microsoft:AzureAd:ClientSecret"];
-                        //options.CallbackPath = configuration["Microsoft:AzureAd:CallbackPath"];
 
                         options.TokenValidationParameters.ValidateIssuer = false;
                         options.ResponseType = OpenIdConnectResponseType.Code;
@@ -256,18 +248,14 @@ namespace CVexplorer.Extensions
 
                             OnTicketReceived = async ctx =>
                             {
-                                // semnează cookie-ul în scheme-ul MicrosoftCookie
-                                // (dacă nu ai deja făcut-o automat de middleware)
                                 await ctx.HttpContext.SignInAsync(
                                     "MicrosoftCookie",
                                     ctx.Principal,
                                     ctx.Properties);
 
-                                // 3) Redirectezi unde vrei
                                 var redirectUri = ctx.ReturnUri ?? "/";
                                 ctx.HttpContext.Response.Redirect(redirectUri);
 
-                                // 4) Blochezi pipeline-ul implicit ca să nu fie dublă redirecționare
                                 ctx.HandleResponse();
 
                             }
@@ -278,11 +266,10 @@ namespace CVexplorer.Extensions
 
 
 
-            // Seed roles using RoleSeeder
             using (var scope = services.BuildServiceProvider().CreateScope())
             {
                 var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<Role>>();
-                RoleSeeder.SeedRoles(roleManager).Wait(); // Wait ensures seeding is done synchronously
+                RoleSeeder.SeedRoles(roleManager).Wait(); 
             }
 
             services.AddAuthorizationBuilder()

@@ -3,7 +3,6 @@ using CVexplorer.Models.Domain;
 using CVexplorer.Models.DTO;
 using CVexplorer.Repositories.Interface;
 using Microsoft.EntityFrameworkCore;
-using UglyToad.PdfPig.Graphics.Operations.SpecialGraphicsState;
 
 namespace CVexplorer.Repositories.Implementation
 {
@@ -76,26 +75,8 @@ namespace CVexplorer.Repositories.Implementation
             return new PositionListDTO
             {
                 PublicId = position.PublicId,
-                Name = position.Name,
-                //RequiredSkills = position.RequiredSkills,
-                //NiceToHave = position.NiceToHave,
-                //Languages = position.Languages,
-                //Certifications = position.Certification,
-                //Responsibilities = position.Responsibilities,
-                //MinimumExperienceMonths = position.MinimumExperienceMonths,
-                //Level = position.Level,
-                //MinimumEducationLevel = position.MinimumEducationLevel,
-                //Weights = new ScoreWeightsDTO
-                //{
-                //    RequiredSkills = position.Weights.RequiredSkills,
-                //    NiceToHave = position.Weights.NiceToHave,
-                //    Languages = position.Weights.Languages,
-                //    Certifications = position.Weights.Certification,
-                //    Responsibilities = position.Weights.Responsibilities,
-                //    ExperienceMonths = position.Weights.ExperienceMonths,
-                //    Level = position.Weights.Level,
-                //    MinimumEducation = position.Weights.MinimumEducation
-                //}
+                Name = position.Name
+                
             };
         }
 
@@ -132,6 +113,13 @@ namespace CVexplorer.Repositories.Implementation
         {
             var position = await _context.Positions.FirstOrDefaultAsync(p => p.PublicId == publicId);
             if (position == null) return false;
+
+            bool hasSubs = await _context.IntegrationSubscriptions
+                .AnyAsync(s => s.PositionId == position.Id);
+
+
+            if(hasSubs)
+                throw new InvalidOperationException("Cannot delete position with active subscriptions");
 
             _context.Positions.Remove(position);
             await _context.SaveChangesAsync();

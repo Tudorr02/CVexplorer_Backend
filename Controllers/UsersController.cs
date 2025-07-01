@@ -23,20 +23,17 @@ namespace CVexplorer.Controllers
         [Authorize(Policy = "RequireHRLeaderRole")]
         private async Task<bool> ValidateHRLeaderAsync(int? userId = null, UserDTO? dto = null)
         {
-            // ✅ Ensure the HR leader (current logged-in user) exists
             var hrLeader = await _userManager.GetUserAsync(User);
             if (hrLeader == null)
             {
                 throw new UnauthorizedAccessException("User not found or not authenticated.");
             }
 
-            // ✅ Ensure the HR leader is assigned to a company
             if (hrLeader.CompanyId == null)
             {
                 throw new UnauthorizedAccessException("You are not assigned to a company.");
             }
 
-            // ✅ If userId and dto are provided, validate the target user
             if (userId.HasValue && dto != null)
             {
                 var targetUser = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == userId.Value);
@@ -46,7 +43,6 @@ namespace CVexplorer.Controllers
                     throw new NotFoundException("User not found.");
                 }
 
-                // ✅ Ensure the user belongs to the same company as HR Leader
                 if (targetUser.CompanyId != hrLeader.CompanyId)
                 {
                     throw new UnauthorizedAccessException("You are not allowed to modify this user.");
@@ -67,14 +63,14 @@ namespace CVexplorer.Controllers
 
                 var hrLeader = await _userManager.GetUserAsync(User);
 
-                await ValidateHRLeaderAsync(); // ✅ Validate HR Leader
+                await ValidateHRLeaderAsync();
 
                 var users = await _userRepository.GetUsersAsync((int)hrLeader.CompanyId);
                 return Ok(users);
             }
             catch (NotFoundException ex)
             {
-                return NotFound(new { error = ex.Message }); // 404 if company not found
+                return NotFound(new { error = ex.Message });
             }
             catch (UnauthorizedAccessException ex)
             {
@@ -82,7 +78,7 @@ namespace CVexplorer.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { error = ex.Message }); // 400 for other failures
+                return BadRequest(new { error = ex.Message });
             }
         }
 
@@ -92,12 +88,11 @@ namespace CVexplorer.Controllers
         {
             try
             {
-                await ValidateHRLeaderAsync(userId, dto); // ✅ Validate HR Leader
+                await ValidateHRLeaderAsync(userId, dto);
 
-                // ✅ Call repository method with UserDTO
                 var updatedUser = await _userRepository.UpdateUserAsync(userId, dto);
 
-                return Ok(updatedUser); // Returns UserListDTO
+                return Ok(updatedUser);
             }
             catch (NotFoundException ex)
             {
@@ -119,10 +114,8 @@ namespace CVexplorer.Controllers
         {
             try
             {
-                // ✅ Validate the HR Leader and check if they can delete the user
                 await ValidateHRLeaderAsync(userId);
 
-                // ✅ Call repository method to delete the user
                 var isDeleted = await _userRepository.DeleteUserAsync(userId);
 
                 if (!isDeleted)
@@ -152,15 +145,13 @@ namespace CVexplorer.Controllers
         {
             try
             {
-                // ✅ Validate HR Leader
+                
                 var hrLeader = await _userManager.GetUserAsync(User);
 
-                await ValidateHRLeaderAsync(); // ✅ Validate HR Leader
+                await ValidateHRLeaderAsync();
 
-                // ✅ Extract CompanyId from HR Leader
                 dto.CompanyName = hrLeader.CompanyId.ToString();
 
-                // ✅ Call the repository method to enroll the user
                 var result = await _userRepository.EnrollUserAsync((int)hrLeader.CompanyId,dto);
 
                 if(result.Equals(false))
@@ -168,7 +159,7 @@ namespace CVexplorer.Controllers
                     return BadRequest(new { error = "Failed to enroll user." });
                 }
 
-                return Ok(); // Returns the created user DTO
+                return Ok();
             }
             catch (ValidationException ex)
             {

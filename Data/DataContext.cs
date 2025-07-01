@@ -6,21 +6,14 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using CVexplorer.Models.Primitives;
-using System.Linq.Expressions;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 using CVexplorer.Enums;
 using System.Text.Json.Serialization;
-using System;
 
 namespace CVexplorer.Data
 {
     public class DataContext(DbContextOptions options) : IdentityDbContext<User,Role,int,IdentityUserClaim<int>, 
         UserRole,IdentityUserLogin<int>, IdentityRoleClaim<int>, IdentityUserToken<int>>(options)
     {
-
-        /// Users DbSet already exists in IdentityDbContext
-        /// Roles DbSet already exists in IdentityDbContext
-
         public DbSet<Company> Companies { get; set; }
         public DbSet<Department> Departments { get; set; }
         public DbSet<UserDepartmentAccess> UserDepartmentAccesses { get; set; }
@@ -65,7 +58,7 @@ namespace CVexplorer.Data
                 .HasOne(uda => uda.Department)
                 .WithMany(d => d.UserDepartmentAccesses)
                 .HasForeignKey(uda => uda.DepartmentId)
-                .OnDelete(DeleteBehavior.ClientCascade); // 👈 simulate cascade
+                .OnDelete(DeleteBehavior.ClientCascade);
 
             // User -> UserDepartmentAccess
             modelBuilder.Entity<UserDepartmentAccess>()
@@ -252,11 +245,6 @@ namespace CVexplorer.Data
                  .Metadata.SetValueComparer(JsonEnumComparer < CvScoreValueField<EducationLevel>> ());
             });
 
-            //modelBuilder.Entity<Round>()
-            //  .HasMany(r => r.RoundEntries)
-            //  .WithOne(e => e.Round)
-            //  .HasForeignKey(e => e.RoundId)
-            //  .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<RoundStage>()
                .HasOne(rs => rs.Round)

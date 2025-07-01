@@ -2,16 +2,18 @@
 using CVexplorer.Models.Domain;
 using CVexplorer.Models.DTO;
 using CVexplorer.Repositories.Interface;
+using CVexplorer.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using static CVexplorer.Services.Implementation.OutlookService;
 
 namespace CVexplorer.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class AccountController(UserManager<User> userManager, ITokenService tokenService, IMapper mapper, UserManager<User> _userManager) : Controller
+    public class AccountController(UserManager<User> userManager, ITokenService tokenService,IGmailService _gService, IOutlookService _oService ,IMapper mapper, UserManager<User> _userManager) : Controller
     {
         [HttpPost("Login")]
         public async Task<ActionResult<AccountDTO>> Login(LoginDTO loginDto)
@@ -51,6 +53,26 @@ namespace CVexplorer.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user != null)
             {
+                try
+                {
+                    var oTokens = await _oService.GetOrRefreshTokensAsync(user.Id.ToString());
+                    if (oTokens != null)
+                        await _oService.Disconnect(user.Id.ToString(), oTokens);
+                }
+                catch
+                {
+                    
+                }
+
+                try
+                {
+                    await _gService.Disconnect(user.Id.ToString());
+
+                }
+                catch
+                {
+
+                }
 
                 Response.Cookies.Delete("Google.Auth", new CookieOptions
                 {
@@ -76,7 +98,10 @@ namespace CVexplorer.Controllers
                     SameSite = SameSiteMode.None
                 });
 
+
             }
+
+
 
             
 
