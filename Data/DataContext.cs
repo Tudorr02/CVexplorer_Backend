@@ -141,12 +141,13 @@ namespace CVexplorer.Data
                 .HasForeignKey(cv => cv.UserUploadedById)
                 .OnDelete(DeleteBehavior.ClientSetNull);
 
-            // CV -> CvEvaluationResult
+            //CV->CvEvaluationResult
             modelBuilder.Entity<CV>()
                 .HasOne(c => c.Evaluation)
                 .WithOne(e => e.Cv)
                 .HasForeignKey<CV>(c => c.EvaluationId)
                 .OnDelete(DeleteBehavior.Cascade);
+
 
             var jsonOptions = new JsonSerializerOptions();
             var enumJsonOptions = new JsonSerializerOptions

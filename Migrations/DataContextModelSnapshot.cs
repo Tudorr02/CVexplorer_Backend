@@ -72,7 +72,7 @@ namespace CVexplorer.Migrations
 
                     b.HasIndex("UserUploadedById");
 
-                    b.ToTable("CVs");
+                    b.ToTable("CVs", (string)null);
                 });
 
             modelBuilder.Entity("CVexplorer.Models.Domain.Company", b =>
@@ -89,7 +89,7 @@ namespace CVexplorer.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Companies");
+                    b.ToTable("Companies", (string)null);
                 });
 
             modelBuilder.Entity("CVexplorer.Models.Domain.CvEvaluationResult", b =>
@@ -139,7 +139,7 @@ namespace CVexplorer.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CvEvaluationResults");
+                    b.ToTable("CvEvaluationResults", (string)null);
                 });
 
             modelBuilder.Entity("CVexplorer.Models.Domain.Department", b =>
@@ -161,7 +161,7 @@ namespace CVexplorer.Migrations
 
                     b.HasIndex("CompanyId");
 
-                    b.ToTable("Departments");
+                    b.ToTable("Departments", (string)null);
                 });
 
             modelBuilder.Entity("CVexplorer.Models.Domain.IntegrationSubscription", b =>
@@ -216,7 +216,7 @@ namespace CVexplorer.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("IntegrationSubscriptions");
+                    b.ToTable("IntegrationSubscriptions", (string)null);
                 });
 
             modelBuilder.Entity("CVexplorer.Models.Domain.Position", b =>
@@ -271,7 +271,7 @@ namespace CVexplorer.Migrations
 
                     b.HasIndex("DepartmentId");
 
-                    b.ToTable("Positions");
+                    b.ToTable("Positions", (string)null);
                 });
 
             modelBuilder.Entity("CVexplorer.Models.Domain.Role", b =>
@@ -330,7 +330,7 @@ namespace CVexplorer.Migrations
 
                     b.HasIndex("PositionId");
 
-                    b.ToTable("Rounds");
+                    b.ToTable("Rounds", (string)null);
                 });
 
             modelBuilder.Entity("CVexplorer.Models.Domain.RoundEntry", b =>
@@ -357,7 +357,7 @@ namespace CVexplorer.Migrations
 
                     b.HasIndex("StageId");
 
-                    b.ToTable("RoundEntries");
+                    b.ToTable("RoundEntries", (string)null);
                 });
 
             modelBuilder.Entity("CVexplorer.Models.Domain.RoundStage", b =>
@@ -385,7 +385,7 @@ namespace CVexplorer.Migrations
 
                     b.HasIndex("RoundId");
 
-                    b.ToTable("RoundStages");
+                    b.ToTable("RoundStages", (string)null);
                 });
 
             modelBuilder.Entity("CVexplorer.Models.Domain.User", b =>
@@ -487,7 +487,7 @@ namespace CVexplorer.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserDepartmentAccesses");
+                    b.ToTable("UserDepartmentAccesses", (string)null);
                 });
 
             modelBuilder.Entity("CVexplorer.Models.Domain.UserRole", b =>
@@ -659,7 +659,7 @@ namespace CVexplorer.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.OwnsOne("CVexplorer.Models.Domain.ScoreWeights", "Weights", b1 =>
+                    b.OwnsOne("CVexplorer.Models.Domain.Position.Weights#CVexplorer.Models.Domain.ScoreWeights", "Weights", b1 =>
                         {
                             b1.Property<Guid>("PositionId")
                                 .HasColumnType("uniqueidentifier");
@@ -690,7 +690,7 @@ namespace CVexplorer.Migrations
 
                             b1.HasKey("PositionId");
 
-                            b1.ToTable("Positions");
+                            b1.ToTable("Positions", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("PositionId");
