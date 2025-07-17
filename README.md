@@ -5,6 +5,11 @@
 ## Description
 The backend API for **CVexplorer**, a service which allows users to upload, manage and evaluate CVs using a dedicated LLM evaluation microservice. It provides secure OAuth authentication and exposes REST endpoints for all core operations.
 
+## Integration
+This backend service works together with:
+- **Frontend UI**: https://github.com/username/proiect-frontend  
+- **LLM Evaluation Service**: https://github.com/username/llm-evaluator
+  
 ## Technologies Used
 - **.NET 8** with C#  
 - **Entity Framework Core** (SQL Server provider)  
