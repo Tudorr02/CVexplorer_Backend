@@ -18,7 +18,8 @@ This backend service works together with:
 - **Swagger (Swashbuckle)** for interactive API docs  
 - **JWT Authentication** using JSON Web Tokens for secure, stateless user sessions
 - **ASP.NET Core Identity** for user and role management  
-
+- **Microsoft Graph API** for Outlook integration
+- **Google Cloud Console** gor Gmail integration
 
 ## Implemented Functionalities
 - **Company Management**: create, read, update, and delete companies  
