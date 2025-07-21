@@ -39,7 +39,7 @@ This backend service works together with:
    ```jsonc
    {
      "ConnectionStrings": {
-       "LocalConnection": "Server=localhost;Database=CVexplorerDb;Trusted_Connection=True;
+       "LocalConnection": "Data Source=<YOUR_SERVER_NAME>;Initial Catalog=CVexplorerDB;Integrated Security=True;Connect Timeout=30;Encrypt=True;Trust Server Certificate=True;Application Intent=ReadWrite;Multi Subnet Failover=False"
      }
    }
 3. Add `OAuth` credentials via User Secrets:
