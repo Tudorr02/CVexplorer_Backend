@@ -40,6 +40,7 @@ This backend service works together with:
    {
      "ConnectionStrings": {
        "LocalConnection": "Server=localhost;Database=CVexplorerDb;Trusted_Connection=True;
+     }
    }
 3. Add `OAuth` credentials via User Secrets:
     ```jsonc
