@@ -7,8 +7,8 @@ The backend API for **CVexplorer**, a service which allows users to upload, mana
 
 ## Integration
 This backend service works together with:
-- **Frontend UI**: https://github.com/username/proiect-frontend  
-- **LLM Evaluation Service**: https://github.com/username/llm-evaluator
+- **Frontend UI**: [CVexplorer - Frontend](https://github.com/Tudorr02/CVexplorer_Frontend)
+- **Evaluation Service**: [CVexplorer - Evaluation Service](https://github.com/Tudorr02/CVexplorer_EvaluationModel)
   
 ## Technologies Used
 - **.NET 8** with C#  
